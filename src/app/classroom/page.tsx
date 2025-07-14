@@ -360,7 +360,9 @@ export default function ClassroomPage() {
           (errorMessage: any) => {
             // QRコードが検出されていない場合はログを出力しない
             if (errorMessage.includes('No barcode or QR code detected') || 
-                errorMessage.includes('NotFoundException')) {
+                errorMessage.includes('NotFoundException') ||
+                errorMessage.includes('QR code parse error') ||
+                errorMessage.includes('No MultiFormat Readers were able to detect')) {
               // 検出エラーは無視（継続スキャン）
               return;
             }
