@@ -278,7 +278,7 @@ export default function ClassroomPage() {
       // カメラ設定
       const config = {
         fps: 10,
-        qrbox: { width: 250, height: 250 }, // QRコード検出エリアを設定
+        qrbox: { width: 300, height: 300 }, // QRコード検出エリアを拡大
         aspectRatio: 1.0,
         disableFlip: false,
         supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
@@ -297,6 +297,7 @@ export default function ClassroomPage() {
         },
         (errorMessage) => {
           console.log('QRコード読み取りエラー:', errorMessage);
+          setDebugInfo(`読み取りエラー: ${errorMessage}`);
           // エラーは無視（継続スキャン）
         }
       );
@@ -537,7 +538,7 @@ export default function ClassroomPage() {
             </p>
             
             {/* テスト用QRコード生成ボタン */}
-            <div className="mt-3">
+            <div className="mt-3 space-y-2">
               <button
                 onClick={() => {
                   const testData = {
@@ -554,9 +555,29 @@ export default function ClassroomPage() {
                   console.log('テストQRコードデータ:', testQRData);
                   alert(`テストQRコードデータ:\n${testQRData}`);
                 }}
-                className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs font-medium transition duration-200"
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs font-medium transition duration-200 mr-2"
               >
                 🧪 テストデータ表示
+              </button>
+              
+              <button
+                onClick={() => {
+                  const testData = {
+                    name: "テスト太郎",
+                    attendance_type: "出席",
+                    timestamp: new Date().toISOString(),
+                    location: {
+                      latitude: 34.7025,
+                      longitude: 135.4959,
+                      address: "大阪市北区西宮原1丁目"
+                    }
+                  };
+                  const testQRData = JSON.stringify(testData);
+                  processQRCode(testQRData);
+                }}
+                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs font-medium transition duration-200"
+              >
+                ✅ テスト実行
               </button>
             </div>
           </div>
@@ -592,6 +613,12 @@ export default function ClassroomPage() {
               <p className="text-blue-800">{scanResult}</p>
             </div>
           )}
+
+          {/* デバッグ情報 */}
+          <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <h4 className="font-medium text-gray-900 mb-2">デバッグ情報:</h4>
+            <p className="text-gray-700 text-sm">{debugInfo}</p>
+          </div>
         </div>
 
 
