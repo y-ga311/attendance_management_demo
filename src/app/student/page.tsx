@@ -12,6 +12,7 @@ export default function StudentPage() {
   const [studentId, setStudentId] = useState('');
   const [studentClass, setStudentClass] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [selectedType, setSelectedType] = useState<AttendanceType>('出席');
   const [location, setLocation] = useState<{latitude: number, longitude: number, address: string} | null>(null);

@@ -10,8 +10,10 @@ type CameraStatus = 'idle' | 'starting' | 'active' | 'error';
 export default function ClassroomPage() {
   const [scanResult, setScanResult] = useState('');
   const [scanMessage, setScanMessage] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [debugInfo, setDebugInfo] = useState<string>('');
   
   // カメラ管理用のref
@@ -286,11 +288,11 @@ export default function ClassroomPage() {
       await html5QrCode.start(
         { facingMode: "environment" },
         config,
-        (decodedText, decodedResult) => {
+        (decodedText) => {
           setDebugInfo(`QRコード検出: ${decodedText}`);
           processQRCode(decodedText);
         },
-        (errorMessage) => {
+        () => {
           // エラーは無視（継続スキャン）
         }
       );
@@ -368,6 +370,7 @@ export default function ClassroomPage() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const stopCamera = async () => {
     setDebugInfo('カメラを停止中...');
     cleanupCamera();
@@ -375,7 +378,7 @@ export default function ClassroomPage() {
     setScanMessage('');
   };
 
-  const processQRCode = async (qrData: any) => {
+  const processQRCode = async (qrData: string) => {
     try {
       setScanResult('QRコードを処理中...');
       setDebugInfo(`QRコード処理開始: ${qrData}`);
@@ -434,7 +437,7 @@ export default function ClassroomPage() {
   };
 
   // QRコードの検証関数
-  const validateQRCode = (data: any): { isValid: boolean; error?: string } => {
+  const validateQRCode = (data: { timestamp: string; location: { address?: string } }): { isValid: boolean; error?: string } => {
     try {
       // 必須フィールドのチェック
       if (!data.timestamp || !data.location) {
@@ -462,11 +465,12 @@ export default function ClassroomPage() {
       }
 
       return { isValid: true };
-    } catch (error) {
+    } catch {
       return { isValid: false, error: 'QRコードデータの検証に失敗しました' };
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getTypeColor = (type: AttendanceType) => {
     switch (type) {
       case '出席': return 'bg-green-100 text-green-800 border-green-200';
