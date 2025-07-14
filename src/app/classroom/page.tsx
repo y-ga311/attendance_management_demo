@@ -320,17 +320,21 @@ export default function ClassroomPage() {
 
       // カメラ設定
       const config = {
-        fps: 3, // フレームレートをさらに下げて安定性を向上
+        fps: 5, // フレームレートを上げて検出精度を向上
         qrbox: { width: getQRBoxSize(), height: getQRBoxSize() }, // 動的にサイズ調整
         aspectRatio: 1.0,
         disableFlip: false,
         supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-        // デプロイ環境での互換性を向上
+        // 本番環境での互換性を向上
         experimentalFeatures: {
-          useBarCodeDetectorIfSupported: false // デプロイ環境では無効化
+          useBarCodeDetectorIfSupported: true // 本番環境では有効化
         },
         // QRコードのみに限定して検出精度を向上
-        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        // 本番環境での追加設定
+        verbose: true, // 詳細ログを有効化
+        showTorchButtonIfSupported: false,
+        showZoomSliderIfSupported: false
       };
 
       console.log('カメラ設定完了:', config);
@@ -349,9 +353,14 @@ export default function ClassroomPage() {
           config,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (decodedText: any) => {
-            console.log('QRコード検出:', decodedText);
+            console.log('=== QRコード検出成功 ===');
+            console.log('検出されたテキスト:', decodedText);
+            console.log('検出時刻:', new Date().toISOString());
+            console.log('カメラ状態:', cameraStatus);
+            
             // 読み取り成功時にカメラを一時停止して重複読み取りを防ぐ
             if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+              console.log('カメラを一時停止します');
               html5QrCodeRef.current.pause();
             }
             processQRCode(decodedText);
@@ -369,6 +378,7 @@ export default function ClassroomPage() {
             
             // その他のエラーのみログ出力
             console.error('読み取りエラー:', errorMessage);
+            console.error('エラー発生時刻:', new Date().toISOString());
             setScanMessage(`読み取りエラー: ${errorMessage}`);
           }
         );
@@ -390,13 +400,34 @@ export default function ClassroomPage() {
       setTimeout(() => {
         if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
           console.log('カメラが正常に動作中です');
+          console.log('html5QrCodeインスタンス詳細:', {
+            isScanning: html5QrCodeRef.current.isScanning,
+            hasVideo: !!document.querySelector('video'),
+            videoElements: document.querySelectorAll('video').length,
+            canvasElements: document.querySelectorAll('canvas').length
+          });
           setScanMessage('QRコードをカメラに向けてください');
         } else {
           console.error('カメラが動作していません');
+          console.error('html5QrCodeインスタンス状態:', {
+            hasInstance: !!html5QrCodeRef.current,
+            isScanning: html5QrCodeRef.current?.isScanning,
+            hasVideo: !!document.querySelector('video')
+          });
           setScanMessage('カメラが動作していません。ページを再読み込みしてください。');
           setCameraStatus('error');
         }
       }, 2000);
+
+      // QRコード検出のテスト用ログ
+      setTimeout(() => {
+        console.log('QRコード検出テスト - 現在の状態:');
+        console.log('- カメラ状態:', cameraStatus);
+        console.log('- スキャンメッセージ:', scanMessage);
+        console.log('- ビデオ要素数:', document.querySelectorAll('video').length);
+        console.log('- Canvas要素数:', document.querySelectorAll('canvas').length);
+        console.log('- Html5Qrcode要素数:', document.querySelectorAll('[id^="html5-qrcode-"]').length);
+      }, 5000);
 
       // 2重表示を防ぐための追加処理
       setTimeout(() => {
