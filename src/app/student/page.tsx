@@ -13,7 +13,6 @@ export default function StudentPage() {
   const [studentId, setStudentId] = useState('');
   const [studentClass, setStudentClass] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [selectedType, setSelectedType] = useState<AttendanceType>('出席');
   const [location, setLocation] = useState<{latitude: number, longitude: number, address: string} | null>(null);
@@ -23,6 +22,7 @@ export default function StudentPage() {
 
   const attendanceTypes: AttendanceType[] = ['出席', '遅刻', '欠課', '早退'];
 
+  // ユーザー設定の読み込み
   useEffect(() => {
     loadUserConfig();
     
@@ -32,7 +32,7 @@ export default function StudentPage() {
     }, 60000); // 1分ごとに更新
 
     return () => clearInterval(timeInterval);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // QRコードを定期的に自動更新（30秒ごと）
   useEffect(() => {

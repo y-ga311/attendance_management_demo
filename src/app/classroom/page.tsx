@@ -10,7 +10,6 @@ export default function ClassroomPage() {
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle');
   const [scanMessage, setScanMessage] = useState('');
   const [scanResult, setScanResult] = useState('');
-  const [cameraPermission, setCameraPermission] = useState(false);
   const [selectedCamera] = useState('user'); // 前面カメラ固定
   
   // カメラ管理用のref
@@ -40,7 +39,7 @@ export default function ClassroomPage() {
   // カメラの初期化
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let html5QrCodeInstance: any = null;
+    const html5QrCodeInstance: any = null;
     let initTimeout: NodeJS.Timeout;
     let retryCount = 0;
     const maxRetries = 3;
@@ -68,11 +67,8 @@ export default function ClassroomPage() {
           const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
           
           if (permission.state === 'denied') {
-            setCameraPermission(false);
             setScanMessage('カメラ権限が拒否されています');
             return;
-          } else if (permission.state === 'granted') {
-            setCameraPermission(true);
           }
         }
         
@@ -89,8 +85,6 @@ export default function ClassroomPage() {
         stream.getTracks().forEach(track => {
           track.stop();
         });
-        
-        setCameraPermission(true);
 
         // コンテナの準備を確認してカメラを自動起動
         const checkAndStartCamera = () => {
