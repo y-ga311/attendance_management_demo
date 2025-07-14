@@ -32,35 +32,45 @@ export default function ClassroomPage() {
       if (isInitializing) return;
       isInitializing = true;
       
-      await checkCameraPermission();
-      
-      // コンテナの準備を確認してカメラを自動起動
-      const checkAndStartCamera = () => {
-        if (qrReaderContainerRef.current) {
-          // 少し遅延してからカメラを起動
-          initTimeout = setTimeout(() => {
-            startCamera();
-          }, 500);
-        } else {
-          retryCount++;
-          if (retryCount <= maxRetries) {
-            // 再試行
-            initTimeout = setTimeout(checkAndStartCamera, 1000);
+      try {
+        await checkCameraPermission();
+        
+        // コンテナの準備を確認してカメラを自動起動
+        const checkAndStartCamera = () => {
+          if (qrReaderContainerRef.current) {
+            // 少し遅延してからカメラを起動
+            initTimeout = setTimeout(() => {
+              startCamera();
+            }, 500);
           } else {
-            // エラーを発生させるか、メッセージを表示
-            // setScanMessage('カメラコンテナが準備できませんでした。');
+            retryCount++;
+            if (retryCount <= maxRetries) {
+              // 再試行
+              initTimeout = setTimeout(checkAndStartCamera, 1000);
+            } else {
+              setScanMessage('カメラコンテナが準備できませんでした。ページを再読み込みしてください。');
+            }
           }
-        }
-      };
-      
-      checkAndStartCamera();
+        };
+        
+        checkAndStartCamera();
+      } catch (error) {
+        console.error('カメラ初期化エラー:', error);
+        setScanMessage('カメラの初期化に失敗しました。');
+      }
     };
     
-    initializeCamera();
+    // 少し遅延してから初期化を開始
+    const delayTimeout = setTimeout(() => {
+      initializeCamera();
+    }, 1000);
     
     return () => {
       if (initTimeout) {
         clearTimeout(initTimeout);
+      }
+      if (delayTimeout) {
+        clearTimeout(delayTimeout);
       }
       cleanupCamera().catch(console.error);
     };
@@ -145,12 +155,20 @@ export default function ClassroomPage() {
 
   const checkCameraPermission = async (): Promise<boolean> => {
     try {
+      // HTTPS環境でのカメラアクセス確認
+      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        console.error('カメラアクセスにはHTTPSが必要です');
+        setScanMessage('カメラアクセスにはHTTPSが必要です');
+        return false;
+      }
+
       // まず、Permissions APIで権限状態を確認
       if (navigator.permissions) {
         const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
         
         if (permission.state === 'denied') {
           setCameraPermission(false);
+          setScanMessage('カメラ権限が拒否されています');
           return false;
         } else if (permission.state === 'granted') {
           setCameraPermission(true);
@@ -159,7 +177,13 @@ export default function ClassroomPage() {
       }
       
       // Permissions APIが利用できない場合や状態が不明な場合は、実際にカメラアクセスを試行
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      });
       
       // ストリームを即座に停止
       stream.getTracks().forEach(track => {
@@ -170,6 +194,20 @@ export default function ClassroomPage() {
       return true;
     } catch (mediaError) {
       console.error('カメラ権限確認エラー:', mediaError);
+      
+      // エラーの種類に応じてメッセージを設定
+      if (mediaError instanceof Error) {
+        if (mediaError.name === 'NotAllowedError' || mediaError.name === 'PermissionDeniedError') {
+          setScanMessage('カメラ権限が拒否されました。ブラウザの設定でカメラを許可してください。');
+        } else if (mediaError.name === 'NotFoundError' || mediaError.name === 'DevicesNotFoundError') {
+          setScanMessage('カメラデバイスが見つかりません。');
+        } else if (mediaError.name === 'NotSupportedError' || mediaError.name === 'ConstraintNotSatisfiedError') {
+          setScanMessage('カメラ機能がサポートされていません。');
+        } else {
+          setScanMessage(`カメラアクセスエラー: ${mediaError.message}`);
+        }
+      }
+      
       setCameraPermission(null);
       return false;
     }
@@ -277,6 +315,11 @@ export default function ClassroomPage() {
 
       // カメラを開始（選択されたカメラを使用）
       try {
+        // カメラ権限を再確認
+        const hasPermission = await checkCameraPermission();
+        if (!hasPermission) {
+          throw new Error('カメラ権限がありません');
+        }
         
         await html5QrCode.start(
           { facingMode: selectedCamera },
@@ -302,6 +345,8 @@ export default function ClassroomPage() {
         
       } catch (startError) {
         console.error('カメラ開始エラー:', startError);
+        setCameraStatus('error');
+        setScanMessage('カメラの起動に失敗しました。ページを再読み込みしてください。');
         throw startError;
       }
 
@@ -370,7 +415,7 @@ export default function ClassroomPage() {
     } catch (error) {
       console.error('カメラ起動エラー:', error);
       setCameraStatus('error');
-      setScanMessage('カメラの起動に失敗しました');
+      setScanMessage('カメラの起動に失敗しました。ページを再読み込みしてください。');
     }
   };
 
