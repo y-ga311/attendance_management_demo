@@ -38,20 +38,25 @@ export default function ClassroomPage() {
 
   // カメラの初期化
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const html5QrCodeInstance: any = null;
     let initTimeout: NodeJS.Timeout;
     let retryCount = 0;
     const maxRetries = 3;
 
     const initializeCamera = async () => {
       if (typeof window === 'undefined') return; // SSR対策
+      
+      console.log('カメラ初期化開始');
+      setCameraStatus('starting');
+      
       try {
         // 動的import
         const { Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+        console.log('html5-qrcodeライブラリ読み込み完了');
+        
         // カメラ権限チェック
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           setScanMessage('このブラウザはカメラに対応していません');
+          setCameraStatus('error');
           return;
         }
         
@@ -59,6 +64,7 @@ export default function ClassroomPage() {
         if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
           console.error('カメラアクセスにはHTTPSが必要です');
           setScanMessage('カメラアクセスにはHTTPSが必要です');
+          setCameraStatus('error');
           return;
         }
 
@@ -68,6 +74,7 @@ export default function ClassroomPage() {
           
           if (permission.state === 'denied') {
             setScanMessage('カメラ権限が拒否されています');
+            setCameraStatus('error');
             return;
           }
         }
@@ -86,20 +93,25 @@ export default function ClassroomPage() {
           track.stop();
         });
 
+        console.log('カメラ権限確認完了');
+
         // コンテナの準備を確認してカメラを自動起動
         const checkAndStartCamera = () => {
           if (qrReaderContainerRef.current) {
+            console.log('QRリーダーコンテナ準備完了、カメラ起動開始');
             // 少し遅延してからカメラを起動
             initTimeout = setTimeout(() => {
               startCamera(Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats);
             }, 500);
           } else {
             retryCount++;
+            console.log(`QRリーダーコンテナ準備中... 試行回数: ${retryCount}/${maxRetries}`);
             if (retryCount <= maxRetries) {
               // 再試行
               initTimeout = setTimeout(checkAndStartCamera, 1000);
             } else {
               setScanMessage('カメラコンテナが準備できませんでした。ページを再読み込みしてください。');
+              setCameraStatus('error');
             }
           }
         };
@@ -108,6 +120,7 @@ export default function ClassroomPage() {
       } catch (e) {
         console.error('カメラ初期化エラー:', e);
         setScanMessage('カメラの初期化に失敗しました。');
+        setCameraStatus('error');
       }
     };
     
@@ -123,7 +136,6 @@ export default function ClassroomPage() {
       if (delayTimeout) {
         clearTimeout(delayTimeout);
       }
-      if (html5QrCodeInstance) html5QrCodeInstance.stop().catch(() => {});
       cleanupCamera().catch(console.error);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -214,16 +226,20 @@ export default function ClassroomPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Html5QrcodeSupportedFormats: any
   ) => {
-    if (cameraStatus === 'error' || cameraStatus === 'idle') {
-      // エラーまたは停止中は何もしない
+    // エラーの場合のみ早期リターン
+    if (cameraStatus === 'error') {
+      console.log('カメラエラー状態のため起動をスキップ');
       return;
     }
 
+    console.log('startCamera関数開始');
     setCameraStatus('starting');
 
     try {
       // 既存のインスタンスをクリーンアップ
+      console.log('既存インスタンスのクリーンアップ開始');
       await cleanupCamera();
+      console.log('クリーンアップ完了');
 
       // ページ全体からHtml5Qrcode関連の要素を完全に削除
       const allQrElements = document.querySelectorAll('[id^="html5-qrcode-"]');
@@ -258,6 +274,7 @@ export default function ClassroomPage() {
         }
         // コンテナ自体もクリア
         container.innerHTML = '';
+        console.log('QRリーダーコンテナクリア完了');
       } else {
         console.warn('警告: QRリーダーコンテナが見つかりません');
       }
@@ -266,6 +283,7 @@ export default function ClassroomPage() {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // 新しいインスタンスを作成
+      console.log('新しいHtml5Qrcodeインスタンス作成開始');
       
       // コンテナの存在を確認
       const qrContainer = document.getElementById("qr-reader");
@@ -276,6 +294,7 @@ export default function ClassroomPage() {
       const html5QrCode = new Html5Qrcode("qr-reader");
       html5QrCodeRef.current = html5QrCode;
       isInitializedRef.current = true;
+      console.log('Html5Qrcodeインスタンス作成完了');
 
       // 画面サイズに応じてQRボックスのサイズを動的に調整
       const getQRBoxSize = () => {
@@ -314,6 +333,8 @@ export default function ClassroomPage() {
         formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
       };
 
+      console.log('カメラ設定完了:', config);
+
       // カメラを開始（選択されたカメラを使用）
       try {
         // カメラ権限を再確認
@@ -322,6 +343,7 @@ export default function ClassroomPage() {
           throw new Error('カメラ権限がありません');
         }
         
+        console.log('カメラ開始処理開始');
         await html5QrCode.start(
           { facingMode: selectedCamera },
           config,
@@ -360,6 +382,7 @@ export default function ClassroomPage() {
 
       setCameraStatus('active');
       setScanMessage('QRコードをカメラに向けてください');
+      console.log('カメラ状態をactiveに設定');
       
       // カメラの状態を確認
       setTimeout(() => {
@@ -369,6 +392,7 @@ export default function ClassroomPage() {
         } else {
           console.error('カメラが動作していません');
           setScanMessage('カメラが動作していません。ページを再読み込みしてください。');
+          setCameraStatus('error');
         }
       }, 2000);
 
