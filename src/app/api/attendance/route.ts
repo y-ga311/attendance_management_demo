@@ -71,7 +71,23 @@ export async function POST(req: NextRequest) {
 
     data.push(attendanceData);
     console.log('データファイル書き込み開始');
-    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    
+    try {
+      const jsonData = JSON.stringify(data, null, 2);
+      console.log('JSONデータ作成完了、サイズ:', jsonData.length);
+      await fs.writeFile(DATA_FILE, jsonData, 'utf-8');
+      console.log('ファイル書き込み完了');
+    } catch (writeError) {
+      console.error('ファイル書き込みエラー:', writeError);
+      console.error('書き込みエラーの詳細:', {
+        message: writeError instanceof Error ? writeError.message : 'Unknown error',
+        stack: writeError instanceof Error ? writeError.stack : undefined,
+        dataLength: data.length,
+        filePath: DATA_FILE
+      });
+      throw writeError;
+    }
+    
     console.log('打刻データを受信しました：', attendanceData);
     return NextResponse.json({ message: '保存しました' });
   } catch (error) {
