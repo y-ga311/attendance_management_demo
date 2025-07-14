@@ -474,12 +474,16 @@ export default function ClassroomPage() {
   const processQRCode = async (qrData: string) => {
     try {
       setScanResult('QRコードを処理中...');
+      console.log('QRコードデータ受信:', qrData);
 
       // QRコードデータをパース
       const parsedData = JSON.parse(qrData);
+      console.log('パースされたデータ:', parsedData);
 
       // 検証チェック
       const validationResult = validateQRCode(parsedData);
+      console.log('検証結果:', validationResult);
+      
       if (!validationResult.isValid) {
         setScanResult(`エラー: ${validationResult.error}`);
         setScanMessage('❌ QRコードが無効です');
@@ -496,6 +500,8 @@ export default function ClassroomPage() {
         return;
       }
 
+      console.log('APIに送信するデータ:', parsedData);
+
       // 出席データをサーバーに送信
       const response = await fetch('/api/attendance', {
         method: 'POST',
@@ -505,9 +511,13 @@ export default function ClassroomPage() {
         body: JSON.stringify(parsedData),
       });
 
+      console.log('APIレスポンスステータス:', response.status);
+      console.log('APIレスポンスヘッダー:', Object.fromEntries(response.headers.entries()));
+
       if (response.ok) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const result = await response.json();
+        console.log('API成功レスポンス:', result);
         setScanResult(`出席記録完了: ${parsedData.name} (${parsedData.attendance_type})`);
         setScanMessage('✅ 出席が正常に記録されました');
         
@@ -518,11 +528,17 @@ export default function ClassroomPage() {
         }, 3000);
       } else {
         const errorData = await response.json();
+        console.error('APIエラーレスポンス:', errorData);
+        console.error('レスポンスステータス:', response.status);
         setScanResult(`エラー: ${errorData.error || '出席記録に失敗しました'}`);
         setScanMessage('❌ 出席記録に失敗しました');
       }
     } catch (error) {
       console.error('QRコード処理エラー:', error);
+      console.error('エラーの詳細:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       setScanResult(`エラー: QRコードの処理に失敗しました`);
       setScanMessage('❌ QRコードの処理に失敗しました');
     }
