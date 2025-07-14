@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+// import { Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats } from 'html5-qrcode'; // ←削除
 
 type AttendanceType = '出席' | '遅刻' | '欠課' | '早退';
 type CameraStatus = 'idle' | 'starting' | 'active' | 'error';
@@ -17,30 +17,71 @@ export default function ClassroomPage() {
   const selectedCamera: 'user' = 'user';
   
   // カメラ管理用のref
-  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const html5QrCodeRef = useRef<any>(null); // Html5Qrcodeのインスタンスを保持
   const qrReaderContainerRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
 
-  // 初期化
+  // カメラの初期化
   useEffect(() => {
-    let isInitializing = false;
+    let html5QrCodeInstance: any = null;
+    let isMounted = true;
     let initTimeout: NodeJS.Timeout;
     let retryCount = 0;
     const maxRetries = 3;
-    
+
     const initializeCamera = async () => {
-      if (isInitializing) return;
-      isInitializing = true;
-      
+      if (typeof window === 'undefined') return; // SSR対策
       try {
-        await checkCameraPermission();
+        // 動的import
+        const { Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+        // カメラ権限チェック
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setScanMessage('このブラウザはカメラに対応していません');
+          return;
+        }
         
+        // HTTPS環境でのカメラアクセス確認
+        if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+          console.error('カメラアクセスにはHTTPSが必要です');
+          setScanMessage('カメラアクセスにはHTTPSが必要です');
+          return;
+        }
+
+        // まず、Permissions APIで権限状態を確認
+        if (navigator.permissions) {
+          const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          
+          if (permission.state === 'denied') {
+            setCameraPermission(false);
+            setScanMessage('カメラ権限が拒否されています');
+            return;
+          } else if (permission.state === 'granted') {
+            setCameraPermission(true);
+          }
+        }
+        
+        // Permissions APIが利用できない場合や状態が不明な場合は、実際にカメラアクセスを試行
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          } 
+        });
+        
+        // ストリームを即座に停止
+        stream.getTracks().forEach(track => {
+          track.stop();
+        });
+        
+        setCameraPermission(true);
+
         // コンテナの準備を確認してカメラを自動起動
         const checkAndStartCamera = () => {
           if (qrReaderContainerRef.current) {
             // 少し遅延してからカメラを起動
             initTimeout = setTimeout(() => {
-              startCamera();
+              startCamera(Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats);
             }, 500);
           } else {
             retryCount++;
@@ -54,8 +95,8 @@ export default function ClassroomPage() {
         };
         
         checkAndStartCamera();
-      } catch (error) {
-        console.error('カメラ初期化エラー:', error);
+      } catch (e) {
+        console.error('カメラ初期化エラー:', e);
         setScanMessage('カメラの初期化に失敗しました。');
       }
     };
@@ -66,12 +107,14 @@ export default function ClassroomPage() {
     }, 1000);
     
     return () => {
+      isMounted = false;
       if (initTimeout) {
         clearTimeout(initTimeout);
       }
       if (delayTimeout) {
         clearTimeout(delayTimeout);
       }
+      if (html5QrCodeInstance) html5QrCodeInstance.stop().catch(() => {});
       cleanupCamera().catch(console.error);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -153,68 +196,14 @@ export default function ClassroomPage() {
     isInitializedRef.current = false;
   }, []);
 
-  const checkCameraPermission = async (): Promise<boolean> => {
-    try {
-      // HTTPS環境でのカメラアクセス確認
-      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-        console.error('カメラアクセスにはHTTPSが必要です');
-        setScanMessage('カメラアクセスにはHTTPSが必要です');
-        return false;
-      }
-
-      // まず、Permissions APIで権限状態を確認
-      if (navigator.permissions) {
-        const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
-        
-        if (permission.state === 'denied') {
-          setCameraPermission(false);
-          setScanMessage('カメラ権限が拒否されています');
-          return false;
-        } else if (permission.state === 'granted') {
-          setCameraPermission(true);
-          return true;
-        }
-      }
-      
-      // Permissions APIが利用できない場合や状態が不明な場合は、実際にカメラアクセスを試行
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      });
-      
-      // ストリームを即座に停止
-      stream.getTracks().forEach(track => {
-        track.stop();
-      });
-      
-      setCameraPermission(true);
-      return true;
-    } catch (mediaError) {
-      console.error('カメラ権限確認エラー:', mediaError);
-      
-      // エラーの種類に応じてメッセージを設定
-      if (mediaError instanceof Error) {
-        if (mediaError.name === 'NotAllowedError' || mediaError.name === 'PermissionDeniedError') {
-          setScanMessage('カメラ権限が拒否されました。ブラウザの設定でカメラを許可してください。');
-        } else if (mediaError.name === 'NotFoundError' || mediaError.name === 'DevicesNotFoundError') {
-          setScanMessage('カメラデバイスが見つかりません。');
-        } else if (mediaError.name === 'NotSupportedError' || mediaError.name === 'ConstraintNotSatisfiedError') {
-          setScanMessage('カメラ機能がサポートされていません。');
-        } else {
-          setScanMessage(`カメラアクセスエラー: ${mediaError.message}`);
-        }
-      }
-      
-      setCameraPermission(null);
-      return false;
-    }
-  };
-
-  const startCamera = async () => {
-    if (cameraStatus === 'active' || cameraStatus === 'starting') {
+  // startCameraを引数付きで修正
+  const startCamera = async (
+    Html5Qrcode: any,
+    Html5QrcodeScanType: any,
+    Html5QrcodeSupportedFormats: any
+  ) => {
+    if (cameraStatus === 'error' || cameraStatus === 'idle') {
+      // エラーまたは停止中は何もしない
       return;
     }
 
@@ -324,7 +313,7 @@ export default function ClassroomPage() {
         await html5QrCode.start(
           { facingMode: selectedCamera },
           config,
-          (decodedText) => {
+          (decodedText: any) => {
             console.log('QRコード検出:', decodedText);
             // 読み取り成功時にカメラを一時停止して重複読み取りを防ぐ
             if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
@@ -332,7 +321,7 @@ export default function ClassroomPage() {
             }
             processQRCode(decodedText);
           },
-          (errorMessage) => {
+          (errorMessage: any) => {
             // QRコードが検出されていない場合はログを出力しない
             if (errorMessage.includes('No barcode or QR code detected') || 
                 errorMessage.includes('NotFoundException')) {
