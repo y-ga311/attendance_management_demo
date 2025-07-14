@@ -13,7 +13,8 @@ export default function ClassroomPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle');
-  const [selectedCamera, setSelectedCamera] = useState<'user' | 'environment'>('user');
+  // 前面カメラ（インカメラ）のみ使用
+  const selectedCamera: 'user' = 'user';
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [debugInfo, setDebugInfo] = useState<string>('');
   
@@ -379,16 +380,7 @@ export default function ClassroomPage() {
     setScanMessage('');
   };
 
-  // カメラ切り替え機能
-  const switchCamera = async () => {
-    setDebugInfo('カメラを切り替え中...');
-    await cleanupCamera();
-    setSelectedCamera(prev => prev === 'user' ? 'environment' : 'user');
-    setCameraStatus('starting');
-    setTimeout(() => {
-      startCamera();
-    }, 500);
-  };
+
 
   const processQRCode = async (qrData: string) => {
     try {
@@ -533,27 +525,14 @@ export default function ClassroomPage() {
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <h3 className="text-lg font-bold text-gray-900 mb-4 text-center">QRコード読み取り</h3>
           
-          {/* カメラ状態表示とカメラ切り替えボタン */}
-          <div className="text-center mb-4 space-y-3">
+          {/* カメラ状態表示 */}
+          <div className="text-center mb-4">
             <div className={`inline-block px-4 py-2 rounded-full text-sm font-medium ${statusDisplay.bgColor} ${statusDisplay.color}`}>
               {statusDisplay.text}
             </div>
-            
-            {/* カメラ切り替えボタン */}
-            {cameraStatus === 'active' && (
-              <div>
-                <button
-                  onClick={switchCamera}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200 flex items-center space-x-2 mx-auto"
-                >
-                  <span>📷</span>
-                  <span>{selectedCamera === 'user' ? '背面カメラに切り替え' : '前面カメラに切り替え'}</span>
-                </button>
-                <p className="text-xs text-gray-500 mt-1">
-                  現在: {selectedCamera === 'user' ? '前面カメラ（インカメラ）' : '背面カメラ'}
-                </p>
-              </div>
-            )}
+            <p className="text-xs text-gray-500 mt-2">
+              前面カメラ（インカメラ）を使用しています
+            </p>
           </div>
 
 
