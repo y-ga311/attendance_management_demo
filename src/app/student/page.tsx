@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import QRCode from 'qrcode';
 
 type AttendanceType = '出席' | '遅刻' | '欠課' | '早退';
@@ -42,7 +43,7 @@ export default function StudentPage() {
 
       return () => clearInterval(interval);
     }
-  }, [studentName, selectedType]);
+  }, [studentName, selectedType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 現在時刻が変更された時に選択可能な出席状況を更新
   useEffect(() => {
@@ -51,14 +52,14 @@ export default function StudentPage() {
       const defaultType = getDefaultAttendanceType();
       setSelectedType(defaultType);
     }
-  }, [currentTime]);
+  }, [currentTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 出席タイプが変更された時にQRコードを即座に更新
   useEffect(() => {
     if (studentName) {
       generateQRCode(studentName, selectedType);
     }
-  }, [selectedType, studentName]);
+  }, [selectedType, studentName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUserConfig = async () => {
     try {
@@ -451,24 +452,29 @@ export default function StudentPage() {
           </div>
         )}
 
-        {/* QRコード表示（常に表示） */}
-        <div className="bg-white rounded-2xl shadow-lg p-2 sm:p-4 flex-1 flex flex-col min-h-0">
-          <div className="text-center flex flex-col h-full">
-            <h3 className="text-lg font-bold text-gray-900 mb-2 sm:mb-4 flex-shrink-0">QRコード</h3>
-            
-            <div className="bg-gray-50 rounded-xl p-2 sm:p-4 border-2 border-dashed border-gray-300 flex-1 flex items-center justify-center min-h-0">
-              {qrCodeUrl ? (
+        {/* QRコード表示 */}
+        {qrCodeUrl && (
+          <div className="bg-white rounded-2xl shadow-lg p-2 sm:p-4 flex-1 flex flex-col min-h-0">
+            <div className="text-center flex flex-col h-full">
+              <h3 className="text-lg font-bold text-gray-900 mb-2 sm:mb-4 flex-shrink-0">QRコード</h3>
+              
+              <div className="bg-gray-50 rounded-xl p-2 sm:p-4 border-2 border-dashed border-gray-300 flex-1 flex items-center justify-center min-h-0">
                 <div className="text-center w-full h-full flex flex-col items-center justify-center">
-                  <img 
-                    src={qrCodeUrl} 
-                    alt="出席用QRコード" 
-                    className="w-auto h-auto object-contain max-w-full max-h-full mb-4"
-                    style={{
-                      minHeight: '150px',
-                      minWidth: '150px'
-                    }}
-                  />
-                  <div className="space-y-2">
+                  <div className="relative">
+                    <Image
+                      src={qrCodeUrl}
+                      alt="出席用QRコード"
+                      width={280}
+                      height={280}
+                      className="w-auto h-auto object-contain max-w-full max-h-full"
+                      style={{
+                        minHeight: '150px',
+                        minWidth: '150px'
+                      }}
+                      priority
+                    />
+                  </div>
+                  <div className="space-y-2 mt-4">
                     <p className="text-sm text-gray-600">
                       選択状況: <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getTypeColor(selectedType)}`}>
                         {selectedType}
@@ -486,18 +492,17 @@ export default function StudentPage() {
                          locationStatus === 'getting' ? '取得中' : '未取得'}
                       </span>
                     </p>
+                    <p className="text-sm text-gray-600">
+                      最終更新: {lastUpdate?.toLocaleTimeString()}
+                    </p>
                   </div>
                 </div>
-              ) : (
-                <div className="text-gray-500 py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p>QRコードを生成中...</p>
-                </div>
-              )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );
 }
+

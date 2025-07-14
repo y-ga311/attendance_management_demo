@@ -1,30 +1,46 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-// import { Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats } from 'html5-qrcode'; // ←削除
 
 type AttendanceType = '出席' | '遅刻' | '欠課' | '早退';
 type CameraStatus = 'idle' | 'starting' | 'active' | 'error';
 
 export default function ClassroomPage() {
-  const [scanResult, setScanResult] = useState('');
-  const [scanMessage, setScanMessage] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle');
-  // 前面カメラ（インカメラ）のみ使用
-  const selectedCamera: 'user' = 'user';
+  const [scanMessage, setScanMessage] = useState('');
+  const [scanResult, setScanResult] = useState('');
+  const [cameraPermission, setCameraPermission] = useState(false);
+  const [selectedCamera] = useState('user'); // 前面カメラ固定
   
   // カメラ管理用のref
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const html5QrCodeRef = useRef<any>(null); // Html5Qrcodeのインスタンスを保持
   const qrReaderContainerRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
 
+  // カメラ権限チェック関数
+  const checkCameraPermission = async (): Promise<boolean> => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        return false;
+      }
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user' } 
+      });
+      
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   // カメラの初期化
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let html5QrCodeInstance: any = null;
-    let isMounted = true;
     let initTimeout: NodeJS.Timeout;
     let retryCount = 0;
     const maxRetries = 3;
@@ -107,7 +123,6 @@ export default function ClassroomPage() {
     }, 1000);
     
     return () => {
-      isMounted = false;
       if (initTimeout) {
         clearTimeout(initTimeout);
       }
@@ -198,8 +213,11 @@ export default function ClassroomPage() {
 
   // startCameraを引数付きで修正
   const startCamera = async (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Html5Qrcode: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Html5QrcodeScanType: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Html5QrcodeSupportedFormats: any
   ) => {
     if (cameraStatus === 'error' || cameraStatus === 'idle') {
@@ -313,6 +331,7 @@ export default function ClassroomPage() {
         await html5QrCode.start(
           { facingMode: selectedCamera },
           config,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (decodedText: any) => {
             console.log('QRコード検出:', decodedText);
             // 読み取り成功時にカメラを一時停止して重複読み取りを防ぐ
@@ -321,6 +340,7 @@ export default function ClassroomPage() {
             }
             processQRCode(decodedText);
           },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (errorMessage: any) => {
             // QRコードが検出されていない場合はログを出力しない
             if (errorMessage.includes('No barcode or QR code detected') || 
@@ -468,6 +488,7 @@ export default function ClassroomPage() {
       });
 
       if (response.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const result = await response.json();
         setScanResult(`出席記録完了: ${parsedData.name} (${parsedData.attendance_type})`);
         setScanMessage('✅ 出席が正常に記録されました');
