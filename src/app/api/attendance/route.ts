@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       const config = JSON.parse(configData);
       studentClass = config.user_info.class || '';
       studentId = config.user_info.student_id || '';
-    } catch (e) {
+    } catch {
       console.log('学生情報の取得に失敗しました');
     }
 
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     try {
       const file = await fs.readFile(DATA_FILE, 'utf-8');
       data = JSON.parse(file);
-    } catch (e) {
+    } catch {
       // ファイルがなければ空配列
       data = [];
     }
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     const currentTime = new Date(attendanceData.timestamp);
     const oneMinuteAgo = new Date(currentTime.getTime() - 60 * 1000); // 1分前
 
-    const isDuplicate = data.some((record: any) => {
+    const isDuplicate = data.some((record: { name: string; timestamp: string }) => {
       if (record.name !== attendanceData.name) return false;
       
       const recordTime = new Date(record.timestamp);
@@ -61,8 +61,8 @@ export async function POST(req: NextRequest) {
     await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
     console.log('打刻データを受信しました：', attendanceData);
     return NextResponse.json({ message: '保存しました' });
-  } catch (e) {
-    console.error('API エラー:', e);
+  } catch (error) {
+    console.error('API エラー:', error);
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }
@@ -72,7 +72,7 @@ export async function GET() {
     const file = await fs.readFile(DATA_FILE, 'utf-8');
     const data = JSON.parse(file);
     return NextResponse.json({ attendance: data });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ attendance: [] });
   }
 } 

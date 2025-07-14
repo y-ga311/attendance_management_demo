@@ -9,7 +9,7 @@ export async function GET() {
     const file = await fs.readFile(STUDENTS_FILE, 'utf-8');
     const students = JSON.parse(file);
     return NextResponse.json({ students });
-  } catch (e) {
+  } catch {
     // ファイルが存在しない場合は空配列を返す
     return NextResponse.json({ students: [] });
   }

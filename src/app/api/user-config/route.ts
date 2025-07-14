@@ -9,7 +9,7 @@ export async function GET() {
     const file = await fs.readFile(CONFIG_FILE, 'utf-8');
     const config = JSON.parse(file);
     return NextResponse.json(config);
-  } catch (e) {
+  } catch {
     // ファイルが存在しない場合はデフォルト値を返す
     return NextResponse.json({
       user_info: {
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     
     await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
     return NextResponse.json({ message: '設定を更新しました' });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: '設定の更新に失敗しました' }, { status: 500 });
   }
 } 
