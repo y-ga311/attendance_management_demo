@@ -160,11 +160,13 @@ export default function StudentPage() {
       
       const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
         width: qrWidth,
-        margin: 2,
+        margin: 4,
+        scale: 8,
         color: {
           dark: '#000000',
           light: '#FFFFFF'
-        }
+        },
+        errorCorrectionLevel: 'M'
       });
       
       setQrCodeUrl(qrCodeDataUrl);

@@ -278,7 +278,7 @@ export default function ClassroomPage() {
       // カメラ設定
       const config = {
         fps: 10,
-        qrbox: { width: 0, height: 0 }, // フレームを完全に削除
+        qrbox: { width: 250, height: 250 }, // QRコード検出エリアを設定
         aspectRatio: 1.0,
         disableFlip: false,
         supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
@@ -292,9 +292,11 @@ export default function ClassroomPage() {
         config,
         (decodedText) => {
           setDebugInfo(`QRコード検出: ${decodedText}`);
+          console.log('QRコード検出:', decodedText);
           processQRCode(decodedText);
         },
-        () => {
+        (errorMessage) => {
+          console.log('QRコード読み取りエラー:', errorMessage);
           // エラーは無視（継続スキャン）
         }
       );
@@ -533,6 +535,30 @@ export default function ClassroomPage() {
             <p className="text-xs text-gray-500 mt-2">
               前面カメラ（インカメラ）を使用しています
             </p>
+            
+            {/* テスト用QRコード生成ボタン */}
+            <div className="mt-3">
+              <button
+                onClick={() => {
+                  const testData = {
+                    name: "テスト太郎",
+                    attendance_type: "出席",
+                    timestamp: new Date().toISOString(),
+                    location: {
+                      latitude: 34.7025,
+                      longitude: 135.4959,
+                      address: "大阪市北区西宮原1丁目"
+                    }
+                  };
+                  const testQRData = JSON.stringify(testData);
+                  console.log('テストQRコードデータ:', testQRData);
+                  alert(`テストQRコードデータ:\n${testQRData}`);
+                }}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs font-medium transition duration-200"
+              >
+                🧪 テストデータ表示
+              </button>
+            </div>
           </div>
 
 
