@@ -1,0 +1,398 @@
+[
+  {
+    "name": "田中花子",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:15:00.000Z",
+    "location": {
+      "latitude": 34.7025,
+      "longitude": 135.4959,
+      "address": "大阪市北区西宮原1丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254001"
+  },
+  {
+    "name": "佐藤次郎",
+    "attendance_type": "遅刻",
+    "timestamp": "2025-07-12T00:25:00.000Z",
+    "location": {
+      "latitude": 34.7023,
+      "longitude": 135.4957,
+      "address": "大阪市北区西宮原2丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254002"
+  },
+  {
+    "name": "山田三郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:12:00.000Z",
+    "location": {
+      "latitude": 34.7028,
+      "longitude": 135.4962,
+      "address": "大阪市北区西宮原3丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254003"
+  },
+  {
+    "name": "鈴木四郎",
+    "attendance_type": "欠課",
+    "timestamp": "2025-07-12T00:45:00.000Z",
+    "location": {
+      "latitude": 34.7021,
+      "longitude": 135.4955,
+      "address": "大阪市北区西宮原4丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254004"
+  },
+  {
+    "name": "高橋五郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:08:00.000Z",
+    "location": {
+      "latitude": 34.703,
+      "longitude": 135.4965,
+      "address": "大阪市北区西宮原5丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254005"
+  },
+  {
+    "name": "伊藤六郎",
+    "attendance_type": "早退",
+    "timestamp": "2025-07-12T01:25:00.000Z",
+    "location": {
+      "latitude": 34.7018,
+      "longitude": 135.4952,
+      "address": "大阪市北区西宮原6丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254006"
+  },
+  {
+    "name": "渡辺七郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:14:00.000Z",
+    "location": {
+      "latitude": 34.7032,
+      "longitude": 135.4968,
+      "address": "大阪市北区西宮原7丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254007"
+  },
+  {
+    "name": "中村八郎",
+    "attendance_type": "遅刻",
+    "timestamp": "2025-07-12T00:22:00.000Z",
+    "location": {
+      "latitude": 34.7015,
+      "longitude": 135.4949,
+      "address": "大阪市北区西宮原8丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254008"
+  },
+  {
+    "name": "小林九郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:11:00.000Z",
+    "location": {
+      "latitude": 34.7035,
+      "longitude": 135.4971,
+      "address": "大阪市北区西宮原9丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254009"
+  },
+  {
+    "name": "加藤十郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:13:00.000Z",
+    "location": {
+      "latitude": 34.7012,
+      "longitude": 135.4946,
+      "address": "大阪市北区西宮原10丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254010"
+  },
+  {
+    "name": "吉田十一郎",
+    "attendance_type": "欠課",
+    "timestamp": "2025-07-12T00:50:00.000Z",
+    "location": {
+      "latitude": 34.7038,
+      "longitude": 135.4974,
+      "address": "大阪市北区西宮原11丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254011"
+  },
+  {
+    "name": "山本十二郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:16:00.000Z",
+    "location": {
+      "latitude": 34.7009,
+      "longitude": 135.4943,
+      "address": "大阪市北区西宮原12丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254012"
+  },
+  {
+    "name": "佐々木十三郎",
+    "attendance_type": "遅刻",
+    "timestamp": "2025-07-12T00:28:00.000Z",
+    "location": {
+      "latitude": 34.7041,
+      "longitude": 135.4977,
+      "address": "大阪市北区西宮原13丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254013"
+  },
+  {
+    "name": "山口十四郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:09:00.000Z",
+    "location": {
+      "latitude": 34.7006,
+      "longitude": 135.494,
+      "address": "大阪市北区西宮原14丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254014"
+  },
+  {
+    "name": "松本十五郎",
+    "attendance_type": "早退",
+    "timestamp": "2025-07-12T01:30:00.000Z",
+    "location": {
+      "latitude": 34.7044,
+      "longitude": 135.498,
+      "address": "大阪市北区西宮原15丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254015"
+  },
+  {
+    "name": "井上十六郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:17:00.000Z",
+    "location": {
+      "latitude": 34.7003,
+      "longitude": 135.4937,
+      "address": "大阪市北区西宮原16丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254016"
+  },
+  {
+    "name": "木村十七郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:10:00.000Z",
+    "location": {
+      "latitude": 34.7047,
+      "longitude": 135.4983,
+      "address": "大阪市北区西宮原17丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254017"
+  },
+  {
+    "name": "林十八郎",
+    "attendance_type": "遅刻",
+    "timestamp": "2025-07-12T00:31:00.000Z",
+    "location": {
+      "latitude": 34.7,
+      "longitude": 135.4934,
+      "address": "大阪市北区西宮原18丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254018"
+  },
+  {
+    "name": "斎藤十九郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:18:00.000Z",
+    "location": {
+      "latitude": 34.705,
+      "longitude": 135.4986,
+      "address": "大阪市北区西宮原19丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254019"
+  },
+  {
+    "name": "清水二十郎",
+    "attendance_type": "欠課",
+    "timestamp": "2025-07-12T00:55:00.000Z",
+    "location": {
+      "latitude": 34.6997,
+      "longitude": 135.4931,
+      "address": "大阪市北区西宮原20丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254020"
+  },
+  {
+    "name": "阿部二十一郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:19:00.000Z",
+    "location": {
+      "latitude": 34.7053,
+      "longitude": 135.4989,
+      "address": "大阪市北区西宮原21丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254021"
+  },
+  {
+    "name": "石川二十二郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:20:00.000Z",
+    "location": {
+      "latitude": 34.6994,
+      "longitude": 135.4928,
+      "address": "大阪市北区西宮原22丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254022"
+  },
+  {
+    "name": "山下二十三郎",
+    "attendance_type": "遅刻",
+    "timestamp": "2025-07-12T00:34:00.000Z",
+    "location": {
+      "latitude": 34.7056,
+      "longitude": 135.4992,
+      "address": "大阪市北区西宮原23丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254023"
+  },
+  {
+    "name": "森二十四郎",
+    "attendance_type": "早退",
+    "timestamp": "2025-07-12T01:35:00.000Z",
+    "location": {
+      "latitude": 34.6991,
+      "longitude": 135.4925,
+      "address": "大阪市北区西宮原24丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254024"
+  },
+  {
+    "name": "池田二十五郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:21:00.000Z",
+    "location": {
+      "latitude": 34.7059,
+      "longitude": 135.4995,
+      "address": "大阪市北区西宮原25丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254025"
+  },
+  {
+    "name": "橋本二十六郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:23:00.000Z",
+    "location": {
+      "latitude": 34.6988,
+      "longitude": 135.4922,
+      "address": "大阪市北区西宮原26丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254026"
+  },
+  {
+    "name": "山下二十七郎",
+    "attendance_type": "欠課",
+    "timestamp": "2025-07-12T01:00:00.000Z",
+    "location": {
+      "latitude": 34.7062,
+      "longitude": 135.4998,
+      "address": "大阪市北区西宮原27丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254027"
+  },
+  {
+    "name": "石井二十八郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:24:00.000Z",
+    "location": {
+      "latitude": 34.6985,
+      "longitude": 135.4919,
+      "address": "大阪市北区西宮原28丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254028"
+  },
+  {
+    "name": "小川二十九郎",
+    "attendance_type": "遅刻",
+    "timestamp": "2025-07-12T00:37:00.000Z",
+    "location": {
+      "latitude": 34.7065,
+      "longitude": 135.5001,
+      "address": "大阪市北区西宮原29丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254029"
+  },
+  {
+    "name": "前田三十郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:26:00.000Z",
+    "location": {
+      "latitude": 34.6982,
+      "longitude": 135.4916,
+      "address": "大阪市北区西宮原30丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254030"
+  },
+  {
+    "name": "岡田三十一郎",
+    "attendance_type": "早退",
+    "timestamp": "2025-07-12T01:40:00.000Z",
+    "location": {
+      "latitude": 34.7068,
+      "longitude": 135.5004,
+      "address": "大阪市北区西宮原31丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254031"
+  },
+  {
+    "name": "長谷川三十二郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:27:00.000Z",
+    "location": {
+      "latitude": 34.6979,
+      "longitude": 135.4913,
+      "address": "大阪市北区西宮原32丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254032"
+  },
+  {
+    "name": "近藤三十三郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-12T00:29:00.000Z",
+    "location": {
+      "latitude": 34.7071,
+      "longitude": 135.5007,
+      "address": "大阪市北区西宮原33丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254033"
+  }
+]
