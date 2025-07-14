@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { Html5Qrcode, Html5QrcodeScanType } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 type AttendanceType = '出席' | '遅刻' | '欠課' | '早退';
 type CameraStatus = 'idle' | 'starting' | 'active' | 'error';
@@ -15,8 +15,6 @@ export default function ClassroomPage() {
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle');
   // 前面カメラ（インカメラ）のみ使用
   const selectedCamera: 'user' = 'user';
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [debugInfo, setDebugInfo] = useState<string>('');
   
   // カメラ管理用のref
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
@@ -39,7 +37,6 @@ export default function ClassroomPage() {
       // コンテナの準備を確認してカメラを自動起動
       const checkAndStartCamera = () => {
         if (qrReaderContainerRef.current) {
-          setDebugInfo('カメラコンテナが準備されました');
           // 少し遅延してからカメラを起動
           initTimeout = setTimeout(() => {
             startCamera();
@@ -47,11 +44,11 @@ export default function ClassroomPage() {
         } else {
           retryCount++;
           if (retryCount <= maxRetries) {
-            setDebugInfo(`カメラコンテナがまだ準備されていません (試行 ${retryCount}/${maxRetries})`);
             // 再試行
             initTimeout = setTimeout(checkAndStartCamera, 1000);
           } else {
-            setDebugInfo('カメラコンテナの準備に失敗しました');
+            // エラーを発生させるか、メッセージを表示
+            // setScanMessage('カメラコンテナが準備できませんでした。');
           }
         }
       };
@@ -72,15 +69,13 @@ export default function ClassroomPage() {
 
   // カメラのクリーンアップ
   const cleanupCamera = useCallback(async () => {
-    setDebugInfo('カメラクリーンアップを実行中...');
     
     // html5QrCodeの停止
     if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
       try {
         await html5QrCodeRef.current.stop();
-        setDebugInfo('html5QrCodeを停止しました');
       } catch (error) {
-        setDebugInfo(`html5QrCode停止エラー: ${error}`);
+        console.error('html5QrCode停止エラー:', error);
       }
     }
     
@@ -100,9 +95,8 @@ export default function ClassroomPage() {
           video.srcObject = null;
         }
       }
-      setDebugInfo('メディアストリームを停止しました');
     } catch (streamError) {
-      setDebugInfo(`メディアストリーム停止エラー: ${streamError}`);
+      console.error('メディアストリーム停止エラー:', streamError);
     }
     
     // すべてのvideo要素を削除
@@ -114,9 +108,8 @@ export default function ClassroomPage() {
           parentNode.removeChild(video);
         }
       });
-      setDebugInfo('すべてのvideo要素を削除しました');
     } catch (error) {
-      setDebugInfo(`video要素削除エラー: ${error}`);
+      console.error('video要素削除エラー:', error);
     }
     
     // canvas要素も削除
@@ -128,9 +121,8 @@ export default function ClassroomPage() {
           parentNode.removeChild(canvas);
         }
       });
-      setDebugInfo('すべてのcanvas要素を削除しました');
     } catch (error) {
-      setDebugInfo(`canvas要素削除エラー: ${error}`);
+      console.error('canvas要素削除エラー:', error);
     }
     
     // Html5Qrcode関連の要素を削除
@@ -142,73 +134,42 @@ export default function ClassroomPage() {
           parentNode.removeChild(element);
         }
       });
-      setDebugInfo('Html5Qrcode関連要素を削除しました');
     } catch (error) {
-      setDebugInfo(`Html5Qrcode要素削除エラー: ${error}`);
+      console.error('Html5Qrcode要素削除エラー:', error);
     }
     
     // インスタンスをクリア
     html5QrCodeRef.current = null;
     isInitializedRef.current = false;
-    setDebugInfo('カメラクリーンアップ完了');
   }, []);
 
   const checkCameraPermission = async (): Promise<boolean> => {
-    setDebugInfo('カメラ権限状態を確認中...');
     try {
       // まず、Permissions APIで権限状態を確認
       if (navigator.permissions) {
         const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
-        setDebugInfo(`Permissions API - カメラ権限状態: ${permission.state}`);
         
         if (permission.state === 'denied') {
           setCameraPermission(false);
-          setDebugInfo('カメラ権限が拒否されています');
           return false;
         } else if (permission.state === 'granted') {
           setCameraPermission(true);
-          setDebugInfo('カメラ権限が許可されています');
           return true;
         }
       }
       
       // Permissions APIが利用できない場合や状態が不明な場合は、実際にカメラアクセスを試行
-      setDebugInfo('実際のカメラアクセスを試行中...');
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        setDebugInfo('カメラアクセスが成功しました');
-        
-        // ストリームを即座に停止
-        stream.getTracks().forEach(track => {
-          track.stop();
-        });
-        
-        setCameraPermission(true);
-        setDebugInfo('カメラ権限が確認されました');
-        return true;
-      } catch (mediaError) {
-        setDebugInfo(`カメラアクセスエラー: ${mediaError}`);
-        
-        if (mediaError instanceof Error) {
-          if (mediaError.name === 'NotAllowedError' || mediaError.name === 'PermissionDeniedError') {
-            setCameraPermission(false);
-            setDebugInfo('カメラ権限が拒否されました');
-            return false;
-          } else if (mediaError.name === 'NotFoundError' || mediaError.name === 'DevicesNotFoundError') {
-            setDebugInfo('カメラデバイスが見つかりません');
-            return false;
-          } else if (mediaError.name === 'NotSupportedError' || mediaError.name === 'ConstraintNotSatisfiedError') {
-            setDebugInfo('カメラ機能がサポートされていません');
-            return false;
-          }
-        }
-        
-        setCameraPermission(null);
-        setDebugInfo('カメラ権限状態が不明です');
-        return false;
-      }
-    } catch (error) {
-      setDebugInfo(`カメラ権限確認エラー: ${error}`);
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      
+      // ストリームを即座に停止
+      stream.getTracks().forEach(track => {
+        track.stop();
+      });
+      
+      setCameraPermission(true);
+      return true;
+    } catch (mediaError) {
+      console.error('カメラ権限確認エラー:', mediaError);
       setCameraPermission(null);
       return false;
     }
@@ -216,12 +177,10 @@ export default function ClassroomPage() {
 
   const startCamera = async () => {
     if (cameraStatus === 'active' || cameraStatus === 'starting') {
-      setDebugInfo('カメラは既に起動中です');
       return;
     }
 
     setCameraStatus('starting');
-    setDebugInfo('カメラを起動中...');
 
     try {
       // 既存のインスタンスをクリーンアップ
@@ -260,50 +219,93 @@ export default function ClassroomPage() {
         }
         // コンテナ自体もクリア
         container.innerHTML = '';
-        setDebugInfo('コンテナを完全にクリアしました');
+      } else {
+        console.warn('警告: QRリーダーコンテナが見つかりません');
       }
       
-      setDebugInfo('完全なクリーンアップを実行しました');
-
       // より長く待機してから新しいインスタンスを作成
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // 新しいインスタンスを作成
+      
+      // コンテナの存在を確認
+      const qrContainer = document.getElementById("qr-reader");
+      if (!qrContainer) {
+        throw new Error("QRリーダーコンテナが見つかりません");
+      }
+      
       const html5QrCode = new Html5Qrcode("qr-reader");
       html5QrCodeRef.current = html5QrCode;
       isInitializedRef.current = true;
 
-      setDebugInfo('Html5Qrcodeインスタンスを作成しました');
+      // 画面サイズに応じてQRボックスのサイズを動的に調整
+      const getQRBoxSize = () => {
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        
+        // 画面サイズに応じて適切なサイズを計算
+        let size = 250; // デフォルトサイズを大きくする
+        
+        if (screenWidth < 480) {
+          size = Math.max(150, Math.min(screenWidth * 0.7, screenHeight * 0.5)); // 最小150px
+        } else if (screenWidth < 768) {
+          size = Math.max(200, Math.min(screenWidth * 0.6, screenHeight * 0.6)); // 最小200px
+        } else {
+          size = Math.max(250, Math.min(screenWidth * 0.5, screenHeight * 0.7)); // 最小250px
+        }
+        
+        // 50pxの最小制限を確実に満たす
+        size = Math.max(50, size);
+        
+        return Math.floor(size);
+      };
 
       // カメラ設定
       const config = {
         fps: 10,
-        qrbox: { width: 300, height: 300 }, // QRコード検出エリアを拡大
+        qrbox: { width: getQRBoxSize(), height: getQRBoxSize() }, // 動的にサイズ調整
         aspectRatio: 1.0,
         disableFlip: false,
-        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+        // QRコード検出の精度を向上
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true
+        },
+        // QRコードのみに限定して検出精度を向上
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
       };
 
-      setDebugInfo('カメラを開始中...');
-
       // カメラを開始（選択されたカメラを使用）
-      await html5QrCode.start(
-        { facingMode: selectedCamera },
-        config,
-        (decodedText) => {
-          setDebugInfo(`QRコード検出: ${decodedText}`);
-          console.log('QRコード検出:', decodedText);
-          processQRCode(decodedText);
-        },
-        (errorMessage) => {
-          console.log('QRコード読み取りエラー:', errorMessage);
-          setDebugInfo(`読み取りエラー: ${errorMessage}`);
-          // エラーは無視（継続スキャン）
-        }
-      );
+      try {
+        
+        await html5QrCode.start(
+          { facingMode: selectedCamera },
+          config,
+          (decodedText) => {
+            console.log('QRコード検出:', decodedText);
+            processQRCode(decodedText);
+          },
+          (errorMessage) => {
+            // console.log('QRコード読み取りエラー:', errorMessage);
+            
+            // エラーメッセージを分類
+            if (errorMessage.includes('No barcode or QR code detected') || 
+                errorMessage.includes('NotFoundException')) {
+              // 検出エラーは頻繁に発生するので、ログも出力しない
+              // console.log('QRコード未検出（継続スキャン中）');
+            } else {
+              console.error('読み取りエラー:', errorMessage);
+            }
+            // エラーは無視（継続スキャン）
+          }
+        );
+        
+      } catch (startError) {
+        console.error('カメラ開始エラー:', startError);
+        throw startError;
+      }
 
       setCameraStatus('active');
-      setDebugInfo('カメラが正常に起動しました');
       setScanMessage('QRコードをカメラに向けてください');
       
       // 2重表示を防ぐための追加処理
@@ -318,7 +320,6 @@ export default function ClassroomPage() {
               parentNode.removeChild(videos[i]);
             }
           }
-          setDebugInfo('重複するvideo要素を削除しました');
         }
         
         // フレームを非表示にするCSSを追加
@@ -364,20 +365,17 @@ export default function ClassroomPage() {
           }
         `;
         document.head.appendChild(style);
-        setDebugInfo('CSSスタイルを適用しました');
       }, 200);
 
     } catch (error) {
       console.error('カメラ起動エラー:', error);
       setCameraStatus('error');
-      setDebugInfo(`カメラ起動エラー: ${error}`);
       setScanMessage('カメラの起動に失敗しました');
     }
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const stopCamera = async () => {
-    setDebugInfo('カメラを停止中...');
     cleanupCamera();
     setCameraStatus('idle');
     setScanMessage('');
@@ -388,18 +386,15 @@ export default function ClassroomPage() {
   const processQRCode = async (qrData: string) => {
     try {
       setScanResult('QRコードを処理中...');
-      setDebugInfo(`QRコード処理開始: ${qrData}`);
 
       // QRコードデータをパース
       const parsedData = JSON.parse(qrData);
-      setDebugInfo(`パースされたデータ: ${JSON.stringify(parsedData)}`);
 
       // 検証チェック
       const validationResult = validateQRCode(parsedData);
       if (!validationResult.isValid) {
         setScanResult(`エラー: ${validationResult.error}`);
         setScanMessage('❌ QRコードが無効です');
-        setDebugInfo(`QRコード検証エラー: ${validationResult.error}`);
         
         // 3秒後にメッセージをクリア
         setTimeout(() => {
@@ -422,7 +417,6 @@ export default function ClassroomPage() {
         const result = await response.json();
         setScanResult(`出席記録完了: ${parsedData.name} (${parsedData.attendance_type})`);
         setScanMessage('✅ 出席が正常に記録されました');
-        setDebugInfo(`出席記録成功: ${JSON.stringify(result)}`);
         
         // 3秒後にメッセージをクリア
         setTimeout(() => {
@@ -433,13 +427,11 @@ export default function ClassroomPage() {
         const errorData = await response.json();
         setScanResult(`エラー: ${errorData.error || '出席記録に失敗しました'}`);
         setScanMessage('❌ 出席記録に失敗しました');
-        setDebugInfo(`出席記録エラー: ${JSON.stringify(errorData)}`);
       }
     } catch (error) {
       console.error('QRコード処理エラー:', error);
       setScanResult(`エラー: QRコードの処理に失敗しました`);
       setScanMessage('❌ QRコードの処理に失敗しました');
-      setDebugInfo(`QRコード処理エラー: ${error}`);
     }
   };
 
@@ -536,50 +528,6 @@ export default function ClassroomPage() {
             <p className="text-xs text-gray-500 mt-2">
               前面カメラ（インカメラ）を使用しています
             </p>
-            
-            {/* テスト用QRコード生成ボタン */}
-            <div className="mt-3 space-y-2">
-              <button
-                onClick={() => {
-                  const testData = {
-                    name: "テスト太郎",
-                    attendance_type: "出席",
-                    timestamp: new Date().toISOString(),
-                    location: {
-                      latitude: 34.7025,
-                      longitude: 135.4959,
-                      address: "大阪市北区西宮原1丁目"
-                    }
-                  };
-                  const testQRData = JSON.stringify(testData);
-                  console.log('テストQRコードデータ:', testQRData);
-                  alert(`テストQRコードデータ:\n${testQRData}`);
-                }}
-                className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs font-medium transition duration-200 mr-2"
-              >
-                🧪 テストデータ表示
-              </button>
-              
-              <button
-                onClick={() => {
-                  const testData = {
-                    name: "テスト太郎",
-                    attendance_type: "出席",
-                    timestamp: new Date().toISOString(),
-                    location: {
-                      latitude: 34.7025,
-                      longitude: 135.4959,
-                      address: "大阪市北区西宮原1丁目"
-                    }
-                  };
-                  const testQRData = JSON.stringify(testData);
-                  processQRCode(testQRData);
-                }}
-                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs font-medium transition duration-200"
-              >
-                ✅ テスト実行
-              </button>
-            </div>
           </div>
 
 
@@ -615,10 +563,10 @@ export default function ClassroomPage() {
           )}
 
           {/* デバッグ情報 */}
-          <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          {/* <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
             <h4 className="font-medium text-gray-900 mb-2">デバッグ情報:</h4>
             <p className="text-gray-700 text-sm">{debugInfo}</p>
-          </div>
+          </div> */}
         </div>
 
 

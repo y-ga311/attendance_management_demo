@@ -394,5 +394,29 @@
     },
     "class": "24期生昼間部",
     "student_id": "254033"
+  },
+  {
+    "name": "テスト太郎",
+    "attendance_type": "出席",
+    "timestamp": "2025-07-14T03:03:21.355Z",
+    "location": {
+      "latitude": 34.7025,
+      "longitude": 135.4959,
+      "address": "大阪市北区西宮原1丁目"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254001"
+  },
+  {
+    "name": "田中花子",
+    "attendance_type": "欠課",
+    "timestamp": "2025-07-14T03:15:46.185Z",
+    "location": {
+      "latitude": 34.7327422483371,
+      "longitude": 135.49405438504334,
+      "address": "西宮原一丁目, 淀川区, 大阪市, 大阪府, 532-0004, 日本"
+    },
+    "class": "24期生昼間部",
+    "student_id": "254001"
   }
 ]
