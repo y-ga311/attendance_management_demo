@@ -227,7 +227,7 @@ export default function AdminPage() {
       
       const exportData = data.attendance || [];
       
-      const csvHeaders = ['StudentID', 'Date', 'Period', 'Attendance'];
+      const csvHeaders = ['学籍番号', '日付', '時限', '出欠区分'];
       const csvData = exportData.map((item: { student_id: string; period?: string; attendance_type: string; timestamp?: string }) => [
         item.student_id, // 学籍番号（API側で既に変換済み）
         item.timestamp || selectedDate || new Date().toISOString().split('T')[0], // 日付（APIから取得した形式）
@@ -239,7 +239,7 @@ export default function AdminPage() {
         .map((row: string[]) => row.map((field: string) => `"${field}"`).join(','))
         .join('\r\n');
       
-      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
