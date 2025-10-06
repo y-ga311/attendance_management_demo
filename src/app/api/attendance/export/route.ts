@@ -101,18 +101,23 @@ export async function GET(req: NextRequest) {
     };
 
     // 学籍番号の4桁目に0を追加する関数
-    const formatStudentId = (studentId: string) => {
-      if (studentId.length >= 4) {
-        const formatted = studentId.slice(0, 3) + '0' + studentId.slice(3);
-        console.log(`学籍番号変換: ${studentId} -> ${formatted}`);
+    const formatStudentId = (studentId: string | number) => {
+      const studentIdStr = String(studentId);
+      console.log(`学籍番号変換デバッグ: "${studentIdStr}" (長さ: ${studentIdStr.length})`);
+      if (studentIdStr.length >= 4) {
+        const formatted = studentIdStr.slice(0, 3) + '0' + studentIdStr.slice(3);
+        console.log(`学籍番号変換: ${studentIdStr} -> ${formatted}`);
         return formatted;
       }
-      console.log(`学籍番号変換（短い）: ${studentId} -> ${studentId}`);
-      return studentId;
+      console.log(`学籍番号変換（短い）: ${studentIdStr} -> ${studentIdStr}`);
+      return studentIdStr;
     };
 
     // 4. 学生データと出席データを統合
+    console.log('学生データサンプル:', students.slice(0, 3).map(s => ({ id: s.id, name: s.name, class: s.class })));
+    
     const exportData = students.map((student: { id: string; name: string; class: string }) => {
+      console.log(`処理中の学生: ${student.id} (${student.name})`);
       // 該当学生の出席データを検索
       const studentAttendance = filteredAttendance.find((att: { id: string; attend: string; time: string; period?: string; place?: string }) => att.id === student.id);
       
