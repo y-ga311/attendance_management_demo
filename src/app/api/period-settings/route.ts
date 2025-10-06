@@ -71,10 +71,14 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
+    console.log('Period Settings API - supabaseAdmin check:', !!supabaseAdmin);
+    
     if (!supabaseAdmin) {
+      console.error('Period Settings API - Supabase admin client is null');
       return NextResponse.json({ error: 'Supabase not available' }, { status: 500 });
     }
     
+    console.log('Period Settings API - Attempting to query period_settings table');
     const { data: settings, error } = await supabaseAdmin
       .from('period_settings')
       .select('*')
@@ -82,7 +86,13 @@ export async function GET() {
 
     if (error) {
       console.error('時間割設定取得エラー:', error);
-      return NextResponse.json({ error: '設定の取得に失敗しました' }, { status: 500 });
+      console.error('Error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+      return NextResponse.json({ error: '設定の取得に失敗しました: ' + error.message }, { status: 500 });
     }
 
     // 設定データをオブジェクト形式に変換

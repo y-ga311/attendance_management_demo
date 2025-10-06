@@ -655,14 +655,18 @@ export default function AdminPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
                     >
                       <option value="all">すべて</option>
-                      <option value="1限">1限</option>
-                      <option value="2限">2限</option>
-                      <option value="3限">3限</option>
-                      <option value="4限">4限</option>
-                      <option value="5限">5限</option>
-                      <option value="6限">6限</option>
-                      <option value="7限">7限</option>
-                      <option value="8限">8限</option>
+                      {Object.keys(periodSettings)
+                        .sort((a, b) => {
+                          // 数字部分でソート（例: 1限, 2限, 10限）
+                          const aNum = parseInt(a.replace('限', ''));
+                          const bNum = parseInt(b.replace('限', ''));
+                          return aNum - bNum;
+                        })
+                        .map((period) => (
+                          <option key={period} value={period}>
+                            {period}
+                          </option>
+                        ))}
                     </select>
                   </div>
                   
