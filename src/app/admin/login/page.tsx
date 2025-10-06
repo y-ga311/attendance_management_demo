@@ -33,7 +33,7 @@ export default function AdminLoginPage() {
       } else {
         setError(result.error || 'ログインに失敗しました');
       }
-    } catch (error) {
+    } catch {
       setError('エラーが発生しました。');
     } finally {
       setIsLoading(false);

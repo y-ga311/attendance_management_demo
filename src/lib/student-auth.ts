@@ -3,8 +3,8 @@ let supabase: any = null;
 
 try {
   if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    const { supabase: supabaseClient } = require('./supabase');
-    supabase = supabaseClient;
+    const supabaseModule = await import('./supabase');
+    supabase = supabaseModule.supabase;
   }
 } catch (error) {
   console.warn('Supabase client not available:', error);
@@ -17,12 +17,10 @@ export interface Student {
   class?: string;
   student_id?: string;
   email?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export interface AuthStudent extends Student {
-  // 追加の認証関連プロパティ
-}
+export type AuthStudent = Student;
 
 export class StudentAuthService {
   // ログイン

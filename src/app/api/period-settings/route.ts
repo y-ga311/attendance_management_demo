@@ -10,7 +10,11 @@ export async function POST(request: NextRequest) {
     }
 
     // テーブルが存在するかチェック
-    const { data: tableCheck, error: tableError } = await supabaseAdmin
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Supabase not available' }, { status: 500 });
+    }
+    
+    const { error: tableError } = await supabaseAdmin
       .from('period_settings')
       .select('id')
       .limit(1);
@@ -38,14 +42,15 @@ export async function POST(request: NextRequest) {
     // 新しい設定を挿入
     const settingsArray = Object.entries(settings).map(([period, times]) => ({
       period,
-      start_time: times.startTime,
-      end_time: times.endTime,
+      start_time: (times as { startTime: string; endTime: string }).startTime,
+      end_time: (times as { startTime: string; endTime: string }).endTime,
       created_at: new Date().toISOString()
     }));
 
     const { error: insertError } = await supabaseAdmin
       .from('period_settings')
-      .insert(settingsArray);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .insert(settingsArray as any);
 
     if (insertError) {
       console.error('設定保存エラー:', insertError);
@@ -56,16 +61,21 @@ export async function POST(request: NextRequest) {
       message: '時間割設定を保存しました',
       savedSettings: settings
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('時間割設定保存エラー:', error);
+    const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
     return NextResponse.json({ 
-      error: 'サーバーエラーが発生しました: ' + error.message 
+      error: 'サーバーエラーが発生しました: ' + errorMessage 
     }, { status: 500 });
   }
 }
 
 export async function GET() {
   try {
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Supabase not available' }, { status: 500 });
+    }
+    
     const { data: settings, error } = await supabaseAdmin
       .from('period_settings')
       .select('*')
@@ -77,7 +87,7 @@ export async function GET() {
     }
 
     // 設定データをオブジェクト形式に変換
-    const settingsObject = settings?.reduce((acc, setting) => {
+    const settingsObject = settings?.reduce((acc, setting: { period: string; start_time: string; end_time: string }) => {
       acc[setting.period] = {
         startTime: setting.start_time,
         endTime: setting.end_time

@@ -7,7 +7,7 @@ import { BrowserMultiFormatReader } from '@zxing/browser';
 import { StudentAuthService } from '@/lib/student-auth';
 import { getJSTISOString } from '@/lib/date-utils';
 
-type AttendanceType = '出席' | '遅刻' | '欠課' | '早退';
+// 未使用の型定義を削除
 
 export default function StudentPage() {
   const router = useRouter();
@@ -18,13 +18,13 @@ export default function StudentPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
-  const [attendanceData, setAttendanceData] = useState<any>(null);
+  const [attendanceData, setAttendanceData] = useState<{ id: string; name: string; class: string; time: string; place: string; attend: string } | null>(null);
   const [scanStatus, setScanStatus] = useState<'idle' | 'success' | 'error' | 'processing'>('idle');
   const [currentTime, setCurrentTime] = useState(new Date());
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
 
-  const attendanceTypes: AttendanceType[] = ['出席', '遅刻', '欠課', '早退'];
+  // 未使用の変数を削除
 
   // 学生情報の読み込み
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function StudentPage() {
       clearInterval(timeInterval);
       if (codeReader.current) {
         try {
-          // @ts-ignore - ZXingライブラリの型定義の問題を回避
+          // @ts-expect-error - ZXingライブラリの型定義の問題を回避
           codeReader.current.reset();
         } catch (error) {
           console.log('QRリーダーのリセット:', error);
@@ -107,7 +107,7 @@ export default function StudentPage() {
   const stopScanning = () => {
     if (codeReader.current) {
       try {
-        // @ts-ignore - ZXingライブラリの型定義の問題を回避
+        // @ts-expect-error - ZXingライブラリの型定義の問題を回避
         codeReader.current.reset();
       } catch (error) {
         console.log('QRリーダーのリセット:', error);
@@ -179,7 +179,7 @@ export default function StudentPage() {
   };
 
   // 出席データをattend_managementテーブルに挿入
-  const insertAttendanceData = async (attendanceInfo: any) => {
+  const insertAttendanceData = async (attendanceInfo: { type: string; timestamp: string; action: string; location: string }) => {
     try {
       const currentStudent = StudentAuthService.getCurrentStudent();
       if (!currentStudent) {
@@ -246,25 +246,7 @@ export default function StudentPage() {
   };
 
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case '出席': return 'bg-green-500 text-white';
-      case '遅刻': return 'bg-yellow-500 text-white';
-      case '欠課': return 'bg-red-500 text-white';
-      case '早退': return 'bg-blue-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case '出席': return '✓';
-      case '遅刻': return '!';
-      case '欠課': return '×';
-      case '早退': return '→';
-      default: return '?';
-    }
-  };
+  // 未使用の関数を削除
 
   if (isLoading) {
     return (
@@ -384,23 +366,32 @@ export default function StudentPage() {
               
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-gray-700">出席状況:</span>
-                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getTypeColor(attendanceData.attendance_type)}`}>
-                  {getTypeIcon(attendanceData.attendance_type)} {attendanceData.attendance_type}
+                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                  attendanceData.attend === '1' ? 'bg-green-100 text-green-800' :
+                  attendanceData.attend === '2' ? 'bg-red-100 text-red-800' :
+                  attendanceData.attend === '3' ? 'bg-yellow-100 text-yellow-800' :
+                  attendanceData.attend === '4' ? 'bg-orange-100 text-orange-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {attendanceData.attend === '1' ? '✓' :
+                   attendanceData.attend === '2' ? '✗' :
+                   attendanceData.attend === '3' ? '!' :
+                   attendanceData.attend === '4' ? '→' : '?'} {attendanceData.attend}
                 </span>
                   </div>
               
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-gray-700">時刻:</span>
                 <span className="text-sm text-gray-900">
-                  {new Date(attendanceData.timestamp).toLocaleString('ja-JP')}
+                  {new Date(attendanceData.time).toLocaleString('ja-JP')}
                       </span>
               </div>
               
-              {attendanceData.location && (
+              {attendanceData.place && (
                 <div className="mt-3 pt-3 border-t border-green-200">
                   <p className="text-sm font-medium text-gray-700 mb-2">位置情報:</p>
                   <p className="text-xs text-gray-600 break-words">
-                    {attendanceData.location.address || '位置情報なし'}
+                    {attendanceData.place || '位置情報なし'}
                   </p>
                 </div>
               )}

@@ -1,14 +1,16 @@
 import { supabase } from './supabase'
 import type { User } from './supabase'
 
-export interface AuthUser extends User {
-  // 追加の認証関連プロパティ
-}
+export type AuthUser = User;
 
 export class AuthService {
   // 現在のユーザーを取得
   static async getCurrentUser(): Promise<AuthUser | null> {
     try {
+      if (!supabase) {
+        return null;
+      }
+      
       const { data: { user }, error } = await supabase.auth.getUser()
       
       if (error || !user) {
@@ -36,6 +38,10 @@ export class AuthService {
   // サインアップ
   static async signUp(email: string, password: string, userData: Partial<User>) {
     try {
+      if (!supabase) {
+        return { data: null, error: new Error('Supabase not available') };
+      }
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -57,7 +63,8 @@ export class AuthService {
             student_id: userData.student_id,
             class: userData.class,
             role: userData.role || 'student'
-          })
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any)
 
         if (profileError) {
           console.error('プロファイル作成エラー:', profileError)
@@ -74,6 +81,10 @@ export class AuthService {
   // サインイン
   static async signIn(email: string, password: string) {
     try {
+      if (!supabase) {
+        return { data: null, error: new Error('Supabase not available') };
+      }
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -89,6 +100,10 @@ export class AuthService {
   // サインアウト
   static async signOut() {
     try {
+      if (!supabase) {
+        return { error: new Error('Supabase not available') };
+      }
+      
       const { error } = await supabase.auth.signOut()
       return { error }
     } catch (error) {
@@ -100,6 +115,10 @@ export class AuthService {
   // パスワードリセット
   static async resetPassword(email: string) {
     try {
+      if (!supabase) {
+        return { error: new Error('Supabase not available') };
+      }
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email)
       return { error }
     } catch (error) {
@@ -111,9 +130,14 @@ export class AuthService {
   // ユーザープロファイル更新
   static async updateProfile(userId: string, updates: Partial<User>) {
     try {
+      if (!supabase) {
+        return { data: null, error: new Error('Supabase not available') };
+      }
+      
       const { data, error } = await supabase
         .from('users')
-        .update(updates)
+        // @ts-expect-error - Supabase型定義の問題を回避
+        .update(updates as any)
         .eq('id', userId)
         .select()
         .single()
@@ -127,6 +151,10 @@ export class AuthService {
 
   // 認証状態の監視
   static onAuthStateChange(callback: (user: AuthUser | null) => void) {
+    if (!supabase) {
+      return { data: { subscription: { unsubscribe: () => {} } } };
+    }
+    
     return supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const user = await this.getCurrentUser()

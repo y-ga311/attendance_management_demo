@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
     }
 
     // 3. 限目フィルタリング（時間帯に基づく）
-    let filteredAttendance = attendance || [];
+    let filteredAttendance: { id: string; attend: string; time: string; period?: string; place?: string }[] = attendance || [];
     if (filterPeriod && filterPeriod !== 'all') {
       const periodMap: {[key: string]: {start: number, end: number}} = {
         '1限': {start: 8, end: 10},
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
       
       const period = periodMap[filterPeriod];
       if (period) {
-        filteredAttendance = filteredAttendance.filter(item => {
+        filteredAttendance = filteredAttendance.filter((item: { time: string }) => {
           const itemTime = new Date(item.time);
           const hour = itemTime.getHours();
           return hour >= period.start && hour < period.end;
@@ -89,9 +89,9 @@ export async function GET(req: NextRequest) {
     }
 
     // 4. 学生データと出席データを統合
-    const exportData = students.map(student => {
+    const exportData = students.map((student: { id: string; name: string; class: string }) => {
       // 該当学生の出席データを検索
-      const studentAttendance = filteredAttendance.find(att => att.id === student.id);
+      const studentAttendance = filteredAttendance.find((att: { id: string; attend: string; time: string; period?: string; place?: string }) => att.id === student.id);
       
       if (studentAttendance) {
         // 出席データがある場合

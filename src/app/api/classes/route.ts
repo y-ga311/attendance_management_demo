@@ -19,7 +19,7 @@ export async function GET() {
     }
 
     // 重複を除去してソート
-    const uniqueClasses = [...new Set(classes?.map(item => item.class) || [])]
+    const uniqueClasses = [...new Set(classes?.map((item: { class: string }) => item.class) || [])]
       .filter(Boolean)
       .sort();
 

@@ -2,37 +2,24 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { AdminAuthService } from '@/lib/admin-auth';
 import QRCode from 'qrcode';
 import { getJSTISOString, getJSTDateString } from '@/lib/date-utils';
 
-type AttendanceData = {
-  id: string;
-  name: string;
-  student_id: string;
-  class: string;
-  attendance_type: '出席' | '遅刻' | '欠課' | '早退';
-  timestamp: string;
-  location?: {
-    latitude: number;
-    longitude: number;
-    address: string;
-  };
-};
+// 未使用の型定義を削除
 
 export default function AdminPage() {
   const router = useRouter();
-  const [attendanceList, setAttendanceList] = useState<AttendanceData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(getJSTDateString());
-  const [filterType, setFilterType] = useState<string>('all');
   const [filterClass, setFilterClass] = useState<string>('all');
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'qr' | 'export' | 'settings'>('export');
   const [exportDataCount, setExportDataCount] = useState<number>(0);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
-  const [exportData, setExportData] = useState<any[]>([]);
+  const [exportData, setExportData] = useState<{ student_id: string; name: string; class: string; attendance_type: string; period?: string }[]>([]);
   
   // QRコード生成用の状態
   const [qrType, setQrType] = useState<'late' | 'early'>('late');
@@ -44,8 +31,8 @@ export default function AdminPage() {
   const [qrValidityEnd, setQrValidityEnd] = useState<string>('');
   const [qrValidityEnabled, setQrValidityEnabled] = useState<boolean>(false);
   
-  // 授業時間設定用の状態
-  const [classSettings, setClassSettings] = useState<{[key: string]: {startTime: string, endTime: string}}>({});
+  // 授業時間設定用の状態（現在未使用）
+  // const [classSettings, setClassSettings] = useState<{[key: string]: {startTime: string, endTime: string}}>({});
   
   // 時間割設定用の状態
   const [periodSettings, setPeriodSettings] = useState<{[key: string]: {startTime: string, endTime: string}}>({
@@ -66,7 +53,7 @@ export default function AdminPage() {
       return;
     }
     
-    loadAttendanceData();
+    // 未使用の関数呼び出しを削除
   }, [selectedDate, router]);
 
   // エクスポート用データの件数とデータを取得
@@ -100,6 +87,7 @@ export default function AdminPage() {
     if (activeTab === 'export') {
       loadExportDataCount();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, filterClass, filterPeriod, activeTab]);
 
   // クラス一覧を取得
@@ -127,89 +115,8 @@ export default function AdminPage() {
     }
   }, [activeTab]);
 
-  const loadAttendanceData = async () => {
-    try {
-      setIsLoading(true);
-      // 実際のAPIエンドポイントに置き換える
-      const response = await fetch('/api/attendance');
-      const data = await response.json();
-      setAttendanceList(data.attendance || []);
-    } catch (error) {
-      console.error('出席データの読み込みに失敗:', error);
-      // デモ用のダミーデータ
-      setAttendanceList([
-        {
-          id: '1',
-          name: '田中太郎',
-          student_id: 'S001',
-          class: '昼間部1年A組',
-          attendance_type: '出席',
-          timestamp: getJSTISOString(),
-          location: {
-            latitude: 34.7203,
-            longitude: 135.2485,
-            address: '大阪府大阪市北区'
-          }
-        },
-        {
-          id: '2',
-          name: '佐藤花子',
-          student_id: 'S002',
-          class: '昼間部1年A組',
-          attendance_type: '遅刻',
-          timestamp: new Date(Date.now() - 300000).toISOString(),
-          location: {
-            latitude: 34.7203,
-            longitude: 135.2485,
-            address: '大阪府大阪市北区'
-          }
-        },
-        {
-          id: '3',
-          name: '山田次郎',
-          student_id: 'S003',
-          class: '夜間部1年B組',
-          attendance_type: '出席',
-          timestamp: new Date(Date.now() - 600000).toISOString(),
-          location: {
-            latitude: 34.7203,
-            longitude: 135.2485,
-            address: '大阪府大阪市北区'
-          }
-        }
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case '1':
-      case '出席': return 'bg-green-100 text-green-800 border-green-200';
-      case '2':
-      case '遅刻': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case '3':
-      case '早退': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case '4':
-      case '欠課': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case '1':
-      case '出席': return '✓';
-      case '2':
-      case '遅刻': return '!';
-      case '3':
-      case '早退': return '→';
-      case '4':
-      case '欠課': return '×';
-      default: return '?';
-    }
-  };
+  // 未使用の関数を削除
 
   const handleLogout = () => {
     AdminAuthService.logout();
@@ -269,16 +176,7 @@ export default function AdminPage() {
     }
   };
 
-  // 出席状況の数値を日本語に変換
-  const getAttendanceTypeText = (type: string) => {
-    switch (type) {
-      case '1': return '出席';
-      case '2': return '欠席';
-      case '3': return '遅刻';
-      case '4': return '早退';
-      default: return type; // 既に日本語の場合はそのまま
-    }
-  };
+  // 未使用の関数を削除
 
   // CSVエクスポート機能
   const exportToCSV = async () => {
@@ -300,7 +198,7 @@ export default function AdminPage() {
       const exportData = data.attendance || [];
       
       const csvHeaders = ['学籍番号', '日付', '時限', '出欠区分'];
-      const csvData = exportData.map((item: any) => [
+      const csvData = exportData.map((item: { student_id: string; period?: string; attendance_type: string }) => [
         item.student_id, // 学籍番号
         selectedDate || new Date().toISOString().split('T')[0], // 日付
         item.period ? item.period.replace('限', '') : '不明', // 時限（数字のみ）
@@ -308,7 +206,7 @@ export default function AdminPage() {
       ]);
       
       const csvContent = [csvHeaders, ...csvData]
-        .map((row: any[]) => row.map((field: any) => `"${field}"`).join(','))
+        .map((row: string[]) => row.map((field: string) => `"${field}"`).join(','))
         .join('\n');
       
       const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -320,19 +218,14 @@ export default function AdminPage() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('CSVエクスポートエラー:', error);
-      alert('CSVエクスポートに失敗しました: ' + error.message);
+      const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
+      alert('CSVエクスポートに失敗しました: ' + errorMessage);
     }
   };
 
-  // 授業時間設定の保存
-  const saveClassSettings = (className: string, startTime: string, endTime: string) => {
-    setClassSettings(prev => ({
-      ...prev,
-      [className]: { startTime, endTime }
-    }));
-  };
+  // 未使用の関数を削除
 
   // 時間割設定の保存
   const savePeriodSettings = (period: string, startTime: string, endTime: string) => {
@@ -390,20 +283,21 @@ export default function AdminPage() {
           .map(([period, times]) => `${period}: ${times.startTime} - ${times.endTime}`)
           .join('\n')
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('時間割設定保存エラー:', error);
       
       // エラーダイアログを表示
       let errorMessage = '❌ 時間割設定の保存に失敗しました\n\n';
       
-      if (error.message.includes('period_settingsテーブルが存在しません')) {
+      if (error instanceof Error && error.message.includes('period_settingsテーブルが存在しません')) {
         errorMessage += '🔧 データベースのセットアップが必要です\n\n';
         errorMessage += '以下のSQLをSupabaseのSQL Editorで実行してください:\n\n';
         errorMessage += '1. add_period_column.sql\n';
         errorMessage += '2. create_period_settings_table.sql\n\n';
         errorMessage += 'これらのファイルはプロジェクトルートにあります。';
       } else {
-        errorMessage += 'エラー詳細: ' + error.message + '\n\n';
+        const errorDetail = error instanceof Error ? error.message : '不明なエラーが発生しました';
+        errorMessage += 'エラー詳細: ' + errorDetail + '\n\n';
         errorMessage += 'データベースの接続に問題がある可能性があります。\n';
         errorMessage += '管理者に連絡してください。';
       }
@@ -429,50 +323,7 @@ export default function AdminPage() {
     }
   };
 
-  const filteredAttendance = attendanceList.filter(item => {
-    const matchesType = filterType === 'all' || item.attendance_type === filterType;
-    const matchesClass = filterClass === 'all' || item.class === filterClass;
-    
-    // 限目フィルター（時間帯に基づく）
-    let matchesPeriod = true;
-    if (filterPeriod !== 'all') {
-      const itemTime = new Date(item.timestamp);
-      const hour = itemTime.getHours();
-      
-      // 限目の時間帯マッピング
-      const periodMap: {[key: string]: {start: number, end: number}} = {
-        '1限': {start: 8, end: 10},
-        '2限': {start: 10, end: 12},
-        '3限': {start: 13, end: 15},
-        '4限': {start: 15, end: 17},
-        '5限': {start: 17, end: 19},
-        '6限': {start: 19, end: 21},
-        '7限': {start: 21, end: 23},
-        '8限': {start: 23, end: 24}
-      };
-      
-      const period = periodMap[filterPeriod];
-      if (period) {
-        matchesPeriod = hour >= period.start && hour < period.end;
-      }
-    }
-    
-    return matchesType && matchesClass && matchesPeriod;
-  });
-
-  const uniqueClasses = [...new Set(attendanceList.map(item => item.class))];
-
-  const getAttendanceStats = () => {
-    const total = attendanceList.length;
-    const present = attendanceList.filter(item => item.attendance_type === '出席').length;
-    const late = attendanceList.filter(item => item.attendance_type === '遅刻').length;
-    const absent = attendanceList.filter(item => item.attendance_type === '欠課').length;
-    const early = attendanceList.filter(item => item.attendance_type === '早退').length;
-
-    return { total, present, late, absent, early };
-  };
-
-  const stats = getAttendanceStats();
+  // 未使用の変数と関数を削除
 
   if (isLoading) {
     return (
@@ -641,7 +492,7 @@ export default function AdminPage() {
                     {qrType === 'late' ? '遅刻用' : '早退用'}QRコード
                   </h4>
                   <div className="bg-gray-50 p-4 rounded-lg inline-block">
-                    <img src={qrCode} alt="QR Code" className="mx-auto" />
+                    <Image src={qrCode} alt="QR Code" width={200} height={200} className="mx-auto" />
                   </div>
                   <p className="text-sm text-black mt-2">
                     学生にこのQRコードをスキャンしてもらってください
@@ -892,28 +743,28 @@ export default function AdminPage() {
                   <div key={period} className="border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-4">{period}</h4>
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
+                    <div>
                         <label className="block text-sm font-medium text-black mb-2">開始時間</label>
-                        <input
-                          type="time"
+                      <input
+                        type="time"
                           value={times.startTime}
                           onChange={(e) => savePeriodSettings(period, e.target.value, times.endTime)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
-                        />
-                      </div>
-                      <div>
+                      />
+                    </div>
+                    <div>
                         <label className="block text-sm font-medium text-black mb-2">終了時間</label>
-                        <input
-                          type="time"
+                      <input
+                        type="time"
                           value={times.endTime}
                           onChange={(e) => savePeriodSettings(period, times.startTime, e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
                         />
                       </div>
-                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
+                </div>
             </div>
           </div>
         )}

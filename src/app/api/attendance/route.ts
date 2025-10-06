@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
         try {
           await fs.access(DATA_FILE);
           console.log('ファイルが存在します');
-        } catch (accessError) {
+        } catch {
           console.log('ファイルが存在しません。新規作成します。');
           await fs.writeFile(DATA_FILE, '[]', 'utf-8');
           console.log('空のファイルを作成しました');
@@ -115,8 +115,8 @@ export async function POST(req: NextRequest) {
         console.log('データファイルが存在しないか読み込みエラー:', error);
         console.log('エラー詳細:', {
           message: error instanceof Error ? error.message : 'Unknown error',
-          code: (error as any)?.code,
-          errno: (error as any)?.errno
+          code: (error as { code?: string })?.code,
+          errno: (error as { errno?: number })?.errno
         });
         data = [];
       }
@@ -149,8 +149,8 @@ export async function POST(req: NextRequest) {
         console.error('ファイルパス:', DATA_FILE);
         console.error('書き込みエラー詳細:', {
           message: writeError instanceof Error ? writeError.message : 'Unknown error',
-          code: (writeError as any)?.code,
-          errno: (writeError as any)?.errno
+          code: (writeError as { code?: string })?.code,
+          errno: (writeError as { errno?: number })?.errno
         });
         return NextResponse.json({ 
           error: 'ファイルの保存に失敗しました',
@@ -200,7 +200,8 @@ export async function POST(req: NextRequest) {
         place: attendanceDataWithPeriod.place,
         attend: attendanceDataWithPeriod.attend,
         period: attendanceDataWithPeriod.period
-      })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any)
       .select()
       .single();
 
@@ -252,6 +253,11 @@ export async function GET() {
     }
 
     // 出席データをattend_managementテーブルから取得（Service Role Key使用）
+    if (!supabaseAdmin) {
+      console.error('Supabase admin client not available');
+      return NextResponse.json({ attendance: [] });
+    }
+    
     const { data: attendance, error: fetchError } = await supabaseAdmin
       .from('attend_management')
       .select('*')
@@ -263,7 +269,7 @@ export async function GET() {
     }
 
     // 既存のAPI形式に合わせてレスポンスを整形
-    const formattedData = (attendance || []).map(item => ({
+    const formattedData = (attendance || []).map((item: { id: string; name: string; class: string; attend: string; time: string; place: string }) => ({
       id: item.id,
       name: item.name,
       student_id: item.id,

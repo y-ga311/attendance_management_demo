@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import QRCode from 'qrcode';
 import { getJSTISOString } from '@/lib/date-utils';
 
@@ -82,6 +83,7 @@ export default function ClassroomDisplayPage() {
     return () => {
       stopAutoRefresh();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -123,9 +125,11 @@ export default function ClassroomDisplayPage() {
             </div>
           ) : qrCode ? (
             <div className="bg-white p-6 rounded-xl shadow-lg inline-block">
-              <img 
+              <Image 
                 src={qrCode} 
                 alt="出席登録QRコード" 
+                width={300}
+                height={300}
                 className="max-w-full h-auto"
               />
             </div>

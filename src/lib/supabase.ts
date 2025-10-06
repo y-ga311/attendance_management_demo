@@ -4,7 +4,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
 // 環境変数が設定されている場合のみクライアントを作成
-let supabase: any = null;
+let supabase: ReturnType<typeof createClient> | null = null;
 
 try {
   if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
@@ -13,29 +13,29 @@ try {
     console.warn('Supabase environment variables not set. Using mock client.');
     // モッククライアントを作成
     supabase = {
-      from: (table: string) => ({
-        select: (columns: string) => ({
-          eq: (column: string, value: any) => ({
-            eq: (column2: string, value2: any) => ({
-              then: (callback: (result: any) => void) => {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              then: (callback: (result: { data: unknown[]; error: null }) => void) => {
                 // モックデータを返す
                 callback({ data: [], error: null });
               }
             })
           })
         }),
-        insert: (data: any) => ({
-          select: (columns: string) => ({
+        insert: () => ({
+          select: () => ({
             single: () => ({
-              then: (callback: (result: any) => void) => {
+              then: (callback: (result: { data: unknown; error: null }) => void) => {
                 // モックデータを返す
-                callback({ data: data, error: null });
+                callback({ data: null, error: null });
               }
             })
           })
         })
       })
-    };
+    } as unknown as ReturnType<typeof createClient>;
   }
 } catch (error) {
   console.error('Failed to create Supabase client:', error);
@@ -45,7 +45,7 @@ try {
 export { supabase }
 
 // サーバーサイド用のクライアント（Service Role Key使用）
-let supabaseAdmin: any = null;
+let supabaseAdmin: ReturnType<typeof createClient> | null = null;
 
 try {
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {

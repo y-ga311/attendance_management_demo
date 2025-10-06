@@ -121,7 +121,7 @@ export class AdminAuthService {
   }
 
   // セッション検証（セキュリティ強化）
-  private static validateSession(sessionData: any): boolean {
+  private static validateSession(sessionData: { id?: string; sessionId?: string; loginTime?: number; userAgent?: string }): boolean {
     if (!sessionData || !sessionData.id || !sessionData.sessionId || !sessionData.loginTime) {
       return false;
     }
