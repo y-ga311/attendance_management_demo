@@ -14,7 +14,10 @@ export async function GET(req: NextRequest) {
       filterPeriod
     });
 
+    console.log('Export API - supabaseAdmin check:', !!supabaseAdmin);
+    
     if (!supabaseAdmin) {
+      console.error('Export API - Supabase admin client is null');
       return NextResponse.json({ error: 'Supabase not available' }, { status: 500 });
     }
 

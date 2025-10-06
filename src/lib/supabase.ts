@@ -48,6 +48,10 @@ export { supabase }
 let supabaseAdmin: ReturnType<typeof createClient> | null = null;
 
 try {
+  console.log('Supabase Admin Client Initialization:');
+  console.log('SUPABASE_SERVICE_ROLE_KEY exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+  console.log('SUPABASE_SERVICE_ROLE_KEY length:', process.env.SUPABASE_SERVICE_ROLE_KEY?.length);
+  
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
     supabaseAdmin = createClient(
       supabaseUrl,
@@ -59,6 +63,7 @@ try {
         }
       }
     );
+    console.log('Supabase Admin client created successfully');
   } else {
     console.warn('Service Role Key not set. Using mock admin client.');
     supabaseAdmin = supabase; // 同じモッククライアントを使用
