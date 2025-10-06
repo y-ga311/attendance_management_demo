@@ -100,6 +100,17 @@ export async function GET(req: NextRequest) {
       return `${year}${month}${day}`;
     };
 
+    // 学籍番号の4桁目に0を追加する関数
+    const formatStudentId = (studentId: string) => {
+      if (studentId.length >= 4) {
+        const formatted = studentId.slice(0, 3) + '0' + studentId.slice(3);
+        console.log(`学籍番号変換: ${studentId} -> ${formatted}`);
+        return formatted;
+      }
+      console.log(`学籍番号変換（短い）: ${studentId} -> ${studentId}`);
+      return studentId;
+    };
+
     // 4. 学生データと出席データを統合
     const exportData = students.map((student: { id: string; name: string; class: string }) => {
       // 該当学生の出席データを検索
@@ -126,7 +137,7 @@ export async function GET(req: NextRequest) {
         return {
           id: student.id,
           name: student.name,
-          student_id: student.id,
+          student_id: formatStudentId(student.id),
           class: student.class,
           attendance_type: studentAttendance.attend,
           timestamp: formatDate(studentAttendance.time),
@@ -150,7 +161,7 @@ export async function GET(req: NextRequest) {
         return {
           id: student.id,
           name: student.name,
-          student_id: student.id,
+          student_id: formatStudentId(student.id),
           class: student.class,
           attendance_type: '2', // 欠席
           timestamp: selectedDate ? formatDate(selectedDate + 'T00:00:00+09:00') : formatDate(new Date().toISOString()),

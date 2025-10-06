@@ -229,10 +229,7 @@ export default function AdminPage() {
       
       const csvHeaders = ['学籍番号', '日付', '時限', '出欠区分'];
       const csvData = exportData.map((item: { student_id: string; period?: string; attendance_type: string; timestamp?: string }) => [
-        // 学籍番号の4桁目に0を追加
-        item.student_id.length >= 4 
-          ? item.student_id.slice(0, 3) + '0' + item.student_id.slice(3)
-          : item.student_id,
+        item.student_id, // 学籍番号（API側で既に変換済み）
         item.timestamp || selectedDate || new Date().toISOString().split('T')[0], // 日付（APIから取得した形式）
         item.period ? item.period.replace('限', '') : '不明', // 時限（数字のみ）
         item.attendance_type // 出欠区分（数字）
