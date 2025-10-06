@@ -41,6 +41,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ attendance: [] });
     }
 
+    // 型を明示的に指定
+    const studentsList: { id: string; name: string; class: string }[] = students as { id: string; name: string; class: string }[];
+
     // 2. 指定された日付の出席データを取得
     let attendanceQuery = supabaseAdmin
       .from('attend_management')
@@ -114,9 +117,9 @@ export async function GET(req: NextRequest) {
     };
 
     // 4. 学生データと出席データを統合
-    console.log('学生データサンプル:', students.slice(0, 3).map(s => ({ id: s.id, name: s.name, class: s.class })));
+    console.log('学生データサンプル:', studentsList.slice(0, 3).map(s => ({ id: s.id, name: s.name, class: s.class })));
     
-    const exportData = students.map((student: { id: string; name: string; class: string }) => {
+    const exportData = studentsList.map((student: { id: string; name: string; class: string }) => {
       console.log(`処理中の学生: ${student.id} (${student.name})`);
       // 該当学生の出席データを検索
       const studentAttendance = filteredAttendance.find((att: { id: string; attend: string; time: string; period?: string; place?: string }) => att.id === student.id);
@@ -179,7 +182,7 @@ export async function GET(req: NextRequest) {
     });
 
     console.log('エクスポートデータ生成完了:', {
-      totalStudents: students.length,
+      totalStudents: studentsList.length,
       attendanceRecords: filteredAttendance.length,
       exportRecords: exportData.length
     });
