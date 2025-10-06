@@ -73,7 +73,7 @@ export default function AdminPage() {
     try {
       const response = await fetch('/api/period-settings');
       if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
         if (data.settings) {
           console.log('データベースから読み込んだ設定:', data.settings);
           setPeriodSettings(data.settings);
@@ -237,9 +237,9 @@ export default function AdminPage() {
       
       const csvContent = [csvHeaders, ...csvData]
         .map((row: string[]) => row.map((field: string) => `"${field}"`).join(','))
-        .join('\r\n');
+        .join('\n');
       
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
@@ -906,7 +906,7 @@ export default function AdminPage() {
                     >
                       キャンセル
                     </button>
-                  </div>
+                </div>
                 </div>
               )}
 
