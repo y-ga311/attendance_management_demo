@@ -1,111 +1,283 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { getPeriodFromTime, getDefaultPeriodSettings } from '@/lib/period-utils';
+
+// 日本語日付文字列を解析する共通関数
+const parseJapaneseDate = (dateString: string): Date => {
+  const match = dateString.match(/(\d{4})年(\d{1,2})月(\d{1,2})日(\d{1,2})時(\d{1,2})分(\d{1,2})秒/);
+  if (match) {
+    const [, year, month, day, hour, minute, second] = match;
+    return new Date(
+      parseInt(year),
+      parseInt(month) - 1,
+      parseInt(day),
+      parseInt(hour),
+      parseInt(minute),
+      parseInt(second)
+    );
+  }
+  return new Date(dateString);
+};
 
 const DATA_FILE = path.join(process.cwd(), 'attendance.json');
 
 export async function POST(req: NextRequest) {
   try {
+    console.log('=== API attendance POST 開始 ===');
     console.log('API attendance POST リクエスト受信');
+    console.log('Supabase設定状況:', {
+      supabaseAvailable: !!supabase,
+      supabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      supabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    });
     
+    console.log('リクエストボディの解析開始...');
     const body = await req.json();
-    console.log('リクエストボディ:', body);
+    console.log('リクエストボディ解析完了:', body);
     
-    if (!body.name || !body.timestamp) {
-      console.error('不正なデータ:', { name: body.name, timestamp: body.timestamp });
+    // attend_managementテーブル用のデータ検証
+    if (!body.id || !body.name || !body.class || !body.time || !body.attend) {
+      console.error('不正なデータ:', { 
+        id: body.id, 
+        name: body.name, 
+        class: body.class, 
+        time: body.time, 
+        attend: body.attend 
+      });
       return NextResponse.json({ error: '不正なデータです' }, { status: 400 });
     }
 
-    // 学生情報を取得してクラスと学籍番号の情報を追加
-    let studentClass = '';
-    let studentId = '';
-    try {
-      const configFile = path.join(process.cwd(), 'user_config.json');
-      console.log('設定ファイルパス:', configFile);
-      const configData = await fs.readFile(configFile, 'utf-8');
-      const config = JSON.parse(configData);
-      studentClass = config.user_info.class || '';
-      studentId = config.user_info.student_id || '';
-      console.log('学生情報取得:', { studentClass, studentId });
-    } catch (error) {
-      console.log('学生情報の取得に失敗しました:', error);
-    }
-
-    // 出席タイプのデフォルト値を設定し、クラス、学籍番号と位置情報を追加
+    // attend_managementテーブル用のデータ構造
     const attendanceData = {
-      ...body,
-      attendance_type: body.attendance_type || '出席',
-      class: studentClass,
-      student_id: studentId
+      id: body.id,           // 学籍番号
+      name: body.name,       // 名前
+      class: body.class,     // 所属
+      time: body.time,       // 時間
+      place: body.place || '', // 場所
+      attend: body.attend    // 出席状況
     };
 
     console.log('処理する出席データ:', attendanceData);
 
-    let data = [];
-    try {
-      console.log('データファイル読み込み開始:', DATA_FILE);
-      const file = await fs.readFile(DATA_FILE, 'utf-8');
-      data = JSON.parse(file);
-      console.log('既存データ数:', data.length);
-    } catch (error) {
-      console.log('データファイルが存在しないか読み込みエラー:', error);
-      // ファイルがなければ空配列
-      data = [];
-    }
+    // period判定のための時間抽出
 
-    // 重複チェック（同じnameで1分以内のデータがあるかチェック）
-    const currentTime = new Date(attendanceData.timestamp);
-    const oneMinuteAgo = new Date(currentTime.getTime() - 60 * 1000); // 1分前
-
-    const isDuplicate = data.some((record: { name: string; timestamp: string }) => {
-      if (record.name !== attendanceData.name) return false;
-      
-      const recordTime = new Date(record.timestamp);
-      return recordTime >= oneMinuteAgo && recordTime <= currentTime;
+    // 時間からperiodを判定
+    const attendanceTime = parseJapaneseDate(attendanceData.time);
+    const timeString = attendanceTime.toLocaleTimeString('ja-JP', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
     });
 
-    if (isDuplicate) {
-      console.log('重複データを検出しました：', attendanceData);
+    // 時間割設定を取得（デフォルト設定を使用）
+    const periodSettings = getDefaultPeriodSettings();
+    const period = getPeriodFromTime(timeString, periodSettings) || '不明';
+
+    console.log('時間判定:', { timeString, period });
+
+    // period情報をattendanceDataに追加
+    const attendanceDataWithPeriod = {
+      ...attendanceData,
+      period: period
+    };
+
+    console.log('period情報追加後の出席データ:', attendanceDataWithPeriod);
+
+    // Supabaseが利用できない場合はファイルベースの保存を使用
+    if (!supabase || !process.env.NEXT_PUBLIC_SUPABASE_URL || !supabaseAdmin) {
+      console.log('=== ファイルベース保存モード ===');
+      console.log('Supabase not available, using file-based storage');
+      console.log('ファイルパス:', DATA_FILE);
+      console.log('現在の作業ディレクトリ:', process.cwd());
+      
+      let data = [];
+      try {
+        console.log('データファイル読み込み開始:', DATA_FILE);
+        
+        // ファイルの存在確認
+        try {
+          await fs.access(DATA_FILE);
+          console.log('ファイルが存在します');
+        } catch (accessError) {
+          console.log('ファイルが存在しません。新規作成します。');
+          await fs.writeFile(DATA_FILE, '[]', 'utf-8');
+          console.log('空のファイルを作成しました');
+        }
+        
+        const file = await fs.readFile(DATA_FILE, 'utf-8');
+        console.log('ファイル内容:', file);
+        data = JSON.parse(file);
+        console.log('既存データ数:', data.length);
+        console.log('既存データ:', data);
+      } catch (error) {
+        console.log('データファイルが存在しないか読み込みエラー:', error);
+        console.log('エラー詳細:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          code: (error as any)?.code,
+          errno: (error as any)?.errno
+        });
+        data = [];
+      }
+
+    // 重複チェック（同じidで1分以内のデータがあるかチェック）
+
+    const currentTime = parseJapaneseDate(attendanceData.time);
+    const oneMinuteAgo = new Date(currentTime.getTime() - 60 * 1000);
+
+      const isDuplicate = data.some((record: { id: string; time: string }) => {
+        if (record.id !== attendanceData.id) return false;
+        const recordTime = parseJapaneseDate(record.time);
+        return recordTime >= oneMinuteAgo && recordTime <= currentTime;
+      });
+
+      if (isDuplicate) {
+        console.log('重複データを検出しました：', attendanceData);
+        return NextResponse.json({ message: '既に記録済みです' }, { status: 200 });
+      }
+
+      data.push(attendanceData);
+      
+      try {
+        const jsonData = JSON.stringify(data, null, 2);
+        await fs.writeFile(DATA_FILE, jsonData, 'utf-8');
+        console.log('ファイル書き込み完了:', DATA_FILE);
+        console.log('保存されたデータ:', data);
+      } catch (writeError) {
+        console.error('ファイル書き込みエラー:', writeError);
+        console.error('ファイルパス:', DATA_FILE);
+        console.error('書き込みエラー詳細:', {
+          message: writeError instanceof Error ? writeError.message : 'Unknown error',
+          code: (writeError as any)?.code,
+          errno: (writeError as any)?.errno
+        });
+        return NextResponse.json({ 
+          error: 'ファイルの保存に失敗しました',
+          details: writeError instanceof Error ? writeError.message : 'Unknown error',
+          filePath: DATA_FILE
+        }, { status: 500 });
+      }
+      
+      console.log('=== ファイル保存成功 ===');
+      console.log('打刻データを受信しました：', attendanceData);
+      return NextResponse.json({ message: '保存しました', data: attendanceData });
+    }
+
+    // Supabaseを使用した保存（Service Role KeyでRLSをバイパス）
+    console.log('=== Supabase保存モード ===');
+    console.log('Service Role Key使用でRLSをバイパス');
+    
+      // 重複チェック（同じ学籍番号で1分以内のデータがあるかチェック）
+
+    const currentTime = parseJapaneseDate(attendanceData.time);
+    const oneMinuteAgo = new Date(currentTime.getTime() - 60 * 1000); // 1分前
+
+    const { data: existingRecords, error: checkError } = await supabaseAdmin
+      .from('attend_management')
+      .select('*')
+      .eq('id', attendanceDataWithPeriod.id)
+      .gte('time', oneMinuteAgo.toISOString())
+      .lte('time', currentTime.toISOString());
+
+    if (checkError) {
+      console.error('重複チェックエラー:', checkError);
+    }
+
+    if (existingRecords && existingRecords.length > 0) {
+      console.log('重複データを検出しました：', attendanceDataWithPeriod);
       return NextResponse.json({ message: '既に記録済みです' }, { status: 200 });
     }
 
-    data.push(attendanceData);
-    console.log('データファイル書き込み開始');
-    
-    try {
-      const jsonData = JSON.stringify(data, null, 2);
-      console.log('JSONデータ作成完了、サイズ:', jsonData.length);
-      await fs.writeFile(DATA_FILE, jsonData, 'utf-8');
-      console.log('ファイル書き込み完了');
-    } catch (writeError) {
-      console.error('ファイル書き込みエラー:', writeError);
-      console.error('書き込みエラーの詳細:', {
-        message: writeError instanceof Error ? writeError.message : 'Unknown error',
-        stack: writeError instanceof Error ? writeError.stack : undefined,
-        dataLength: data.length,
-        filePath: DATA_FILE
+    // 出席データをattend_managementテーブルに保存（Service Role Key使用）
+    const { data: newAttendance, error: insertError } = await supabaseAdmin
+      .from('attend_management')
+      .insert({
+        id: attendanceDataWithPeriod.id,
+        name: attendanceDataWithPeriod.name,
+        class: attendanceDataWithPeriod.class,
+        time: currentTime.toISOString(), // ISO形式に変換
+        place: attendanceDataWithPeriod.place,
+        attend: attendanceDataWithPeriod.attend,
+        period: attendanceDataWithPeriod.period
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('出席データ保存エラー:', insertError);
+      console.error('エラー詳細:', {
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        code: insertError.code
       });
-      throw writeError;
+      return NextResponse.json({ 
+        error: '出席データの保存に失敗しました',
+        details: insertError.message,
+        code: insertError.code
+      }, { status: 500 });
     }
     
-    console.log('打刻データを受信しました：', attendanceData);
-    return NextResponse.json({ message: '保存しました' });
+    console.log('打刻データを受信しました：', newAttendance);
+    return NextResponse.json({ message: '保存しました', data: newAttendance });
   } catch (error) {
     console.error('API エラー:', error);
     console.error('エラーの詳細:', {
       message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
     });
-    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'サーバーエラー',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      type: error instanceof Error ? error.name : 'Unknown'
+    }, { status: 500 });
   }
 }
 
 export async function GET() {
   try {
-    const file = await fs.readFile(DATA_FILE, 'utf-8');
-    const data = JSON.parse(file);
-    return NextResponse.json({ attendance: data });
-  } catch {
+    // Supabaseが利用できない場合はファイルベースの取得を使用
+    if (!supabase || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.log('Supabase not available, using file-based storage');
+      
+      try {
+        const file = await fs.readFile(DATA_FILE, 'utf-8');
+        const data = JSON.parse(file);
+        return NextResponse.json({ attendance: data });
+      } catch {
+        return NextResponse.json({ attendance: [] });
+      }
+    }
+
+    // 出席データをattend_managementテーブルから取得（Service Role Key使用）
+    const { data: attendance, error: fetchError } = await supabaseAdmin
+      .from('attend_management')
+      .select('*')
+      .order('time', { ascending: false });
+
+    if (fetchError) {
+      console.error('出席データ取得エラー:', fetchError);
+      return NextResponse.json({ attendance: [] });
+    }
+
+    // 既存のAPI形式に合わせてレスポンスを整形
+    const formattedData = (attendance || []).map(item => ({
+      id: item.id,
+      name: item.name,
+      student_id: item.id,
+      class: item.class,
+      attendance_type: item.attend,
+      timestamp: item.time,
+      location: {
+        address: item.place
+      }
+    }));
+
+    return NextResponse.json({ attendance: formattedData });
+  } catch (error) {
+    console.error('出席データ取得エラー:', error);
     return NextResponse.json({ attendance: [] });
   }
 } 

@@ -9,7 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.58.0",
     "@types/qrcode": "^1.5.5",
+    "@vercel/postgres": "^0.10.0",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
     "html5-qrcode": "^2.3.8",
     "next": "15.3.4",
     "qrcode": "^1.5.4",
