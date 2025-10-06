@@ -142,13 +142,17 @@ export async function GET(req: NextRequest) {
           }
         }
 
+        // 出席データがある場合の日付処理をデバッグ
+        const timestamp = formatDate(studentAttendance.time);
+        console.log(`出席学生の日付処理: studentAttendance.time=${studentAttendance.time}, timestamp=${timestamp}`);
+
         return {
           id: student.id,
           name: student.name,
           student_id: formatStudentId(student.id),
           class: student.class,
           attendance_type: studentAttendance.attend,
-          timestamp: formatDate(studentAttendance.time),
+          timestamp: timestamp,
           period: periodNumber,
           location: {
             address: studentAttendance.place || ''
@@ -166,13 +170,24 @@ export async function GET(req: NextRequest) {
           }
         }
 
+        // 欠席の場合の日付処理をデバッグ
+        let timestamp;
+        if (selectedDate) {
+          const dateString = selectedDate + 'T00:00:00+09:00';
+          timestamp = formatDate(dateString);
+          console.log(`欠席学生の日付処理: selectedDate=${selectedDate}, dateString=${dateString}, timestamp=${timestamp}`);
+        } else {
+          timestamp = formatDate(new Date().toISOString());
+          console.log(`欠席学生の日付処理（デフォルト）: timestamp=${timestamp}`);
+        }
+
         return {
           id: student.id,
           name: student.name,
           student_id: formatStudentId(student.id),
           class: student.class,
           attendance_type: '2', // 欠席
-          timestamp: selectedDate ? formatDate(selectedDate + 'T00:00:00+09:00') : formatDate(new Date().toISOString()),
+          timestamp: timestamp,
           period: periodNumber,
           location: {
             address: ''
