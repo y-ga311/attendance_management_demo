@@ -49,8 +49,7 @@ export async function POST(request: NextRequest) {
 
     const { error: insertError } = await supabaseAdmin
       .from('period_settings')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .insert(settingsArray as any);
+      .insert(settingsArray);
 
     if (insertError) {
       console.error('設定保存エラー:', insertError);

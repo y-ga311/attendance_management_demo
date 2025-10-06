@@ -200,8 +200,7 @@ export async function POST(req: NextRequest) {
         place: attendanceDataWithPeriod.place,
         attend: attendanceDataWithPeriod.attend,
         period: attendanceDataWithPeriod.period
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any)
+      })
       .select()
       .single();
 

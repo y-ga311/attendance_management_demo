@@ -257,13 +257,6 @@ export default function AdminPage() {
 
   // 未使用の関数を削除
 
-  // 時間割設定の保存
-  const savePeriodSettings = (period: string, startTime: string, endTime: string) => {
-    setPeriodSettings(prev => ({
-      ...prev,
-      [period]: { startTime, endTime }
-    }));
-  };
 
   // 新しい限目を追加する関数
   const addPeriod = () => {

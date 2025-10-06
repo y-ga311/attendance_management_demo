@@ -63,8 +63,7 @@ export class AuthService {
             student_id: userData.student_id,
             class: userData.class,
             role: userData.role || 'student'
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } as any)
+          })
 
         if (profileError) {
           console.error('プロファイル作成エラー:', profileError)
