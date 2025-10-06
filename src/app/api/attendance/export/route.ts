@@ -91,6 +91,15 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // 日付をYYYYMMDD形式に変換する関数
+    const formatDate = (dateString: string) => {
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}${month}${day}`;
+    };
+
     // 4. 学生データと出席データを統合
     const exportData = students.map((student: { id: string; name: string; class: string }) => {
       // 該当学生の出席データを検索
@@ -113,14 +122,14 @@ export async function GET(req: NextRequest) {
             periodNumber = match[1];
           }
         }
-        
+
         return {
           id: student.id,
           name: student.name,
           student_id: student.id,
           class: student.class,
           attendance_type: studentAttendance.attend,
-          timestamp: studentAttendance.time,
+          timestamp: formatDate(studentAttendance.time),
           period: periodNumber,
           location: {
             address: studentAttendance.place || ''
@@ -137,14 +146,14 @@ export async function GET(req: NextRequest) {
             periodNumber = match[1];
           }
         }
-        
+
         return {
           id: student.id,
           name: student.name,
           student_id: student.id,
           class: student.class,
           attendance_type: '2', // 欠席
-          timestamp: selectedDate ? new Date(selectedDate + 'T00:00:00+09:00').toISOString() : new Date().toISOString(),
+          timestamp: selectedDate ? formatDate(selectedDate + 'T00:00:00+09:00') : formatDate(new Date().toISOString()),
           period: periodNumber,
           location: {
             address: ''
