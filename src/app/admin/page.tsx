@@ -228,9 +228,9 @@ export default function AdminPage() {
       const exportData = data.attendance || [];
       
       const csvHeaders = ['学籍番号', '日付', '時限', '出欠区分'];
-      const csvData = exportData.map((item: { student_id: string; period?: string; attendance_type: string }) => [
+      const csvData = exportData.map((item: { student_id: string; period?: string; attendance_type: string; timestamp?: string }) => [
         item.student_id, // 学籍番号
-        selectedDate || new Date().toISOString().split('T')[0], // 日付
+        item.timestamp || selectedDate || new Date().toISOString().split('T')[0], // 日付（APIから取得した形式）
         item.period ? item.period.replace('限', '') : '不明', // 時限（数字のみ）
         item.attendance_type // 出欠区分（数字）
       ]);
