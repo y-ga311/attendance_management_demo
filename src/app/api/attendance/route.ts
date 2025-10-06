@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 出席データをattend_managementテーブルに保存（Service Role Key使用）
-    const { data: newAttendance, error: insertError } = await supabaseAdmin
+    const { data: newAttendance, error: insertError } = await (supabaseAdmin as any)
       .from('attend_management')
       .insert({
         id: attendanceDataWithPeriod.id,

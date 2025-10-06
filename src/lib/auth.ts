@@ -54,7 +54,7 @@ export class AuthService {
 
       // ユーザープロファイルを作成
       if (data.user) {
-        const { error: profileError } = await supabase
+        const { error: profileError } = await (supabase as any)
           .from('users')
           .insert({
             id: data.user.id,

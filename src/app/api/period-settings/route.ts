@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString()
     }));
 
-    const { error: insertError } = await supabaseAdmin
+    const { error: insertError } = await (supabaseAdmin as any)
       .from('period_settings')
       .insert(settingsArray);
 
