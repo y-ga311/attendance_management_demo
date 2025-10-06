@@ -12,7 +12,7 @@ import { getJSTISOString, getJSTDateString } from '@/lib/date-utils';
 
 export default function AdminPage() {
   const router = useRouter();
-  const [isLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(getJSTDateString());
   const [filterClass, setFilterClass] = useState<string>('all');
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
@@ -45,6 +45,14 @@ export default function AdminPage() {
     '7限': { startTime: '19:40', endTime: '21:10' },
     '8限': { startTime: '21:20', endTime: '22:50' }
   });
+  
+  // 新しい限目追加用の状態
+  const [newPeriod, setNewPeriod] = useState({ period: '', startTime: '09:00', endTime: '10:30' });
+  const [showAddPeriod, setShowAddPeriod] = useState(false);
+  
+  // 限目編集用の状態
+  const [editingPeriod, setEditingPeriod] = useState<string | null>(null);
+  const [editPeriodName, setEditPeriodName] = useState('');
 
   useEffect(() => {
     // 管理者認証チェック
@@ -53,8 +61,30 @@ export default function AdminPage() {
       return;
     }
     
-    // 未使用の関数呼び出しを削除
-  }, [selectedDate, router]);
+    // 認証成功後、ローディング状態を解除
+    setIsLoading(false);
+    
+    // 時間割設定をデータベースから読み込み
+    loadPeriodSettings();
+  }, [router]);
+
+  // 時間割設定をデータベースから読み込む関数
+  const loadPeriodSettings = async () => {
+    try {
+      const response = await fetch('/api/period-settings');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.settings) {
+          console.log('データベースから読み込んだ設定:', data.settings);
+          setPeriodSettings(data.settings);
+        }
+      } else {
+        console.log('時間割設定の読み込みに失敗、デフォルト設定を使用');
+      }
+    } catch (error) {
+      console.error('時間割設定読み込みエラー:', error);
+    }
+  };
 
   // エクスポート用データの件数とデータを取得
   const loadExportDataCount = async () => {
@@ -235,6 +265,101 @@ export default function AdminPage() {
     }));
   };
 
+  // 新しい限目を追加する関数
+  const addPeriod = () => {
+    if (!newPeriod.period.trim()) {
+      alert('限目名を入力してください（例: 9限）');
+      return;
+    }
+    
+    if (periodSettings[newPeriod.period]) {
+      alert('その限目は既に存在します');
+      return;
+    }
+    
+    const updatedSettings = {
+      ...periodSettings,
+      [newPeriod.period]: {
+        startTime: newPeriod.startTime,
+        endTime: newPeriod.endTime
+      }
+    };
+    
+    setPeriodSettings(updatedSettings);
+    setNewPeriod({ period: '', startTime: '09:00', endTime: '10:30' });
+    setShowAddPeriod(false);
+  };
+
+  // 限目を削除する関数
+  const deletePeriod = (period: string) => {
+    if (confirm(`「${period}」を削除しますか？`)) {
+      const updatedSettings = { ...periodSettings };
+      delete updatedSettings[period];
+      setPeriodSettings(updatedSettings);
+    }
+  };
+
+  // 限目の時間を更新する関数
+  const updatePeriodTime = (period: string, field: 'startTime' | 'endTime', value: string) => {
+    const updatedSettings = {
+      ...periodSettings,
+      [period]: {
+        ...periodSettings[period],
+        [field]: value
+      }
+    };
+    setPeriodSettings(updatedSettings);
+  };
+
+  // 限目名の編集を開始する関数
+  const startEditPeriod = (period: string) => {
+    setEditingPeriod(period);
+    setEditPeriodName(period);
+  };
+
+  // 限目名の編集を保存する関数
+  const saveEditPeriod = () => {
+    if (!editPeriodName.trim()) {
+      alert('限目名を入力してください');
+      return;
+    }
+    
+    if (editPeriodName !== editingPeriod && periodSettings[editPeriodName]) {
+      alert('その限目名は既に存在します');
+      return;
+    }
+    
+    if (editingPeriod) {
+      if (editPeriodName !== editingPeriod) {
+        // 限目名が変更された場合
+        console.log('限目名を変更:', editingPeriod, '→', editPeriodName);
+        const updatedSettings = { ...periodSettings };
+        const periodData = updatedSettings[editingPeriod];
+        
+        // 古い限目を削除
+        delete updatedSettings[editingPeriod];
+        
+        // 新しい限目名で追加
+        updatedSettings[editPeriodName] = periodData;
+        
+        console.log('更新後の設定:', updatedSettings);
+        setPeriodSettings(updatedSettings);
+      } else {
+        console.log('限目名は変更されていません');
+      }
+      // 限目名が同じ場合でも編集モードを終了
+    }
+    
+    setEditingPeriod(null);
+    setEditPeriodName('');
+  };
+
+  // 限目名の編集をキャンセルする関数
+  const cancelEditPeriod = () => {
+    setEditingPeriod(null);
+    setEditPeriodName('');
+  };
+
   // 時間割設定をデータベースに保存
   const savePeriodSettingsToDB = async () => {
     // 確認ダイアログを表示
@@ -277,12 +402,11 @@ export default function AdminPage() {
         throw new Error(errorData.error || '時間割設定の保存に失敗しました');
       }
 
+      // 成功後にデータベースから最新の設定を読み込み
+      await loadPeriodSettings();
+
       // 成功ダイアログを表示
-      alert('✅ 時間割設定を保存しました！\n\n設定内容:\n' + 
-        Object.entries(periodSettings)
-          .map(([period, times]) => `${period}: ${times.startTime} - ${times.endTime}`)
-          .join('\n')
-      );
+      alert('✅ 時間割設定を保存しました！\n\n設定が正常にデータベースに保存されました。');
     } catch (error: unknown) {
       console.error('時間割設定保存エラー:', error);
       
@@ -707,13 +831,26 @@ export default function AdminPage() {
         {activeTab === 'settings' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-gray-900">時間割設定</h3>
-              <button
-                onClick={savePeriodSettingsToDB}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200 shadow-md"
-              >
-                設定を保存
-              </button>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">時間割設定</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  現在の限目数: {Object.keys(periodSettings).length}限
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowAddPeriod(!showAddPeriod)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200 shadow-md"
+                >
+                  {showAddPeriod ? 'キャンセル' : '+ 限目を追加'}
+                </button>
+                <button
+                  onClick={savePeriodSettingsToDB}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200 shadow-md"
+                >
+                  設定を保存
+                </button>
+              </div>
             </div>
             
             <div className="space-y-4">
@@ -724,47 +861,140 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h4 className="font-medium text-yellow-900 mb-2">⚠️ 初回セットアップが必要な場合</h4>
-                <p className="text-yellow-800 text-sm mb-2">
-                  初回使用時は、データベースにテーブルを作成する必要があります。
-                </p>
-                <div className="text-xs text-yellow-700 bg-yellow-100 p-2 rounded">
-                  <strong>必要なSQLファイル:</strong><br/>
-                  • add_period_column.sql<br/>
-                  • create_period_settings_table.sql<br/>
-                  <br/>
-                  これらをSupabaseのSQL Editorで実行してください。
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(periodSettings).map(([period, times]) => (
-                  <div key={period} className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-900 mb-4">{period}</h4>
-                    <div className="grid grid-cols-2 gap-4">
+              {/* 新しい限目追加フォーム */}
+              {showAddPeriod && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                  <h4 className="font-medium text-green-900 mb-4">新しい限目を追加</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-black mb-2">開始時間</label>
+                      <label className="block text-sm font-medium text-black mb-2">限目名</label>
                       <input
-                        type="time"
-                          value={times.startTime}
-                          onChange={(e) => savePeriodSettings(period, e.target.value, times.endTime)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+                        type="text"
+                        placeholder="例: 9限"
+                        value={newPeriod.period}
+                        onChange={(e) => setNewPeriod({...newPeriod, period: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-black"
                       />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-black mb-2">終了時間</label>
+                      <label className="block text-sm font-medium text-black mb-2">開始時間</label>
                       <input
                         type="time"
-                          value={times.endTime}
-                          onChange={(e) => savePeriodSettings(period, times.startTime, e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
-                        />
-                      </div>
+                        value={newPeriod.startTime}
+                        onChange={(e) => setNewPeriod({...newPeriod, startTime: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-black"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-2">終了時間</label>
+                      <input
+                        type="time"
+                        value={newPeriod.endTime}
+                        onChange={(e) => setNewPeriod({...newPeriod, endTime: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-black"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={addPeriod}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200"
+                    >
+                      追加
+                    </button>
+                    <button
+                      onClick={() => setShowAddPeriod(false)}
+                      className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition duration-200"
+                    >
+                      キャンセル
+                    </button>
                   </div>
                 </div>
-              ))}
-                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(periodSettings)
+                  .sort(([, a], [, b]) => {
+                    // 開始時間でソート
+                    return a.startTime.localeCompare(b.startTime);
+                  })
+                  .map(([period, times]) => (
+                  <div key={period} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-center mb-4">
+                      {editingPeriod === period ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="text"
+                            value={editPeriodName}
+                            onChange={(e) => setEditPeriodName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                saveEditPeriod();
+                              } else if (e.key === 'Escape') {
+                                cancelEditPeriod();
+                              }
+                            }}
+                            className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+                            placeholder="限目名"
+                            autoFocus
+                          />
+                          <button
+                            onClick={saveEditPeriod}
+                            className="text-green-600 hover:text-green-800 text-sm font-medium"
+                          >
+                            保存
+                          </button>
+                          <button
+                            onClick={cancelEditPeriod}
+                            className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+                          >
+                            キャンセル
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <h4 
+                            className="font-medium text-black cursor-pointer hover:text-blue-600 transition-colors"
+                            onClick={() => startEditPeriod(period)}
+                            title="クリックして編集"
+                          >
+                            {period}
+                          </h4>
+                          <button
+                            onClick={() => deletePeriod(period)}
+                            className="text-red-600 hover:text-red-800 text-sm font-medium"
+                          >
+                            削除
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    {editingPeriod !== period && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-black mb-2">開始時間</label>
+                          <input
+                            type="time"
+                            value={times.startTime}
+                            onChange={(e) => updatePeriodTime(period, 'startTime', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-black mb-2">終了時間</label>
+                          <input
+                            type="time"
+                            value={times.endTime}
+                            onChange={(e) => updatePeriodTime(period, 'endTime', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

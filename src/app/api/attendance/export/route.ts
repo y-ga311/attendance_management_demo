@@ -95,6 +95,22 @@ export async function GET(req: NextRequest) {
       
       if (studentAttendance) {
         // 出席データがある場合
+        // 指定された時限の数字を取得
+        let periodNumber = '不明';
+        if (filterPeriod && filterPeriod !== 'all') {
+          // 時限の数字部分を抽出（例: '1限' -> '1'）
+          const match = filterPeriod.match(/(\d+)限/);
+          if (match) {
+            periodNumber = match[1];
+          }
+        } else if (studentAttendance.period) {
+          // 出席データにperiodが設定されている場合、その数字部分を抽出
+          const match = studentAttendance.period.match(/(\d+)限/);
+          if (match) {
+            periodNumber = match[1];
+          }
+        }
+        
         return {
           id: student.id,
           name: student.name,
@@ -102,13 +118,23 @@ export async function GET(req: NextRequest) {
           class: student.class,
           attendance_type: studentAttendance.attend,
           timestamp: studentAttendance.time,
-          period: studentAttendance.period || '不明',
+          period: periodNumber,
           location: {
             address: studentAttendance.place || ''
           }
         };
       } else {
         // 出席データがない場合（欠席）
+        // 指定された時限の数字を取得
+        let periodNumber = '不明';
+        if (filterPeriod && filterPeriod !== 'all') {
+          // 時限の数字部分を抽出（例: '1限' -> '1'）
+          const match = filterPeriod.match(/(\d+)限/);
+          if (match) {
+            periodNumber = match[1];
+          }
+        }
+        
         return {
           id: student.id,
           name: student.name,
@@ -116,7 +142,7 @@ export async function GET(req: NextRequest) {
           class: student.class,
           attendance_type: '2', // 欠席
           timestamp: selectedDate ? new Date(selectedDate + 'T00:00:00+09:00').toISOString() : new Date().toISOString(),
-          period: '不明',
+          period: periodNumber,
           location: {
             address: ''
           }
