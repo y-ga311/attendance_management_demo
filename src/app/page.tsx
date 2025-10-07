@@ -61,37 +61,40 @@ export default function Home() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-100 fixed inset-0">
-      {/* Background image (responsive) - 縦長画像（ポートレート） */}
-      <Image
-        src="/hero-background.png"
-        alt="アプリ背景（縦長）"
-        fill
-        priority
-        className="transition-opacity duration-300"
-        style={{
-          opacity: isClient && isPortrait ? 1 : 0,
-          zIndex: 0,
-          pointerEvents: 'none',
-          objectFit: 'cover',
-          objectPosition: '50% 42%'
-        }}
-      />
-      
-      {/* Background image (responsive) - 横長画像（ランドスケープ） */}
-      <Image
-        src="/hero-background2.png"
-        alt="アプリ背景（横長）"
-        fill
-        priority
-        className="transition-opacity duration-300"
-        style={{
-          opacity: isClient && !isPortrait ? 1 : 0,
-          zIndex: 0,
-          pointerEvents: 'none',
-          objectFit: 'cover',
-          objectPosition: '50% 50%'
-        }}
-      />
+      {/* Background image container with padding for button */}
+      <div className="absolute inset-0 pb-28 sm:pb-20">
+        {/* Background image (responsive) - 縦長画像（ポートレート） */}
+        <Image
+          src="/hero-background.png"
+          alt="アプリ背景（縦長）"
+          fill
+          priority
+          className="transition-opacity duration-300"
+          style={{
+            opacity: isClient && isPortrait ? 1 : 0,
+            zIndex: 0,
+            pointerEvents: 'none',
+            objectFit: 'cover',
+            objectPosition: '50% 40%'
+          }}
+        />
+        
+        {/* Background image (responsive) - 横長画像（ランドスケープ） */}
+        <Image
+          src="/hero-background2.png"
+          alt="アプリ背景（横長）"
+          fill
+          priority
+          className="transition-opacity duration-300"
+          style={{
+            opacity: isClient && !isPortrait ? 1 : 0,
+            zIndex: 0,
+            pointerEvents: 'none',
+            objectFit: 'cover',
+            objectPosition: '50% 50%'
+          }}
+        />
+      </div>
 
       {/* Overlay (optional, readability for text) */}
       <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent" style={{ zIndex: 1 }} />
