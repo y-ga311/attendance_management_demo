@@ -73,7 +73,7 @@ export default function Home() {
           zIndex: 0,
           pointerEvents: 'none',
           objectFit: 'contain',
-          objectPosition: '50% 60%'
+          objectPosition: '50% 40%'
         }}
       />
       
