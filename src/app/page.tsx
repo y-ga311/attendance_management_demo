@@ -60,7 +60,7 @@ export default function Home() {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-gray-100">
+    <div className="relative w-full h-screen overflow-hidden bg-gray-100 fixed inset-0">
       {/* Background image (responsive) - 縦長画像（ポートレート） */}
       <Image
         src="/hero-background.png"
@@ -72,8 +72,8 @@ export default function Home() {
           opacity: isClient && isPortrait ? 1 : 0,
           zIndex: 0,
           pointerEvents: 'none',
-          objectFit: 'contain',
-          objectPosition: 'center'
+          objectFit: 'cover',
+          objectPosition: 'center top'
         }}
       />
       
@@ -88,8 +88,8 @@ export default function Home() {
           opacity: isClient && !isPortrait ? 1 : 0,
           zIndex: 0,
           pointerEvents: 'none',
-          objectFit: 'contain',
-          objectPosition: 'center'
+          objectFit: 'cover',
+          objectPosition: 'center center'
         }}
       />
 
