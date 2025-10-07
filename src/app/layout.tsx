@@ -16,6 +16,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ピッとすくーる - 出席管理システム",
   description: "学校の出席管理を簡単に行えるシステムです。学生、教員、教室それぞれの視点から出席状況を管理できます。",
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 };
 
 export default function RootLayout({

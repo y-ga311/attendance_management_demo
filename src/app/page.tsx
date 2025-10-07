@@ -205,7 +205,7 @@ export default function Home() {
       )}
       
       {/* 下部のボタンエリア */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-full max-w-sm px-4 z-30">
+      <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-sm px-4 z-30" style={{ bottom: 'max(2rem, env(safe-area-inset-bottom, 2rem))' }}>
         <Link 
           href="/login"
           className="block w-full navy-button text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 text-lg shadow-2xl hover:shadow-3xl transform hover:-translate-y-1 active:scale-95 text-center backdrop-blur-sm"
