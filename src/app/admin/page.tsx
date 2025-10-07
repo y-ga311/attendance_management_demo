@@ -98,8 +98,27 @@ export default function AdminPage() {
       const data = await response.json();
       
       if (response.ok) {
-        setExportDataCount(data.attendance?.length || 0);
-        setExportData(data.attendance || []);
+        const attendanceData = data.attendance || [];
+        
+        // 学籍番号順にソート（数値として比較）
+        const sortedData = [...attendanceData].sort((a, b) => {
+          const idA = String(a.student_id || '');
+          const idB = String(b.student_id || '');
+          
+          // 学籍番号が数値のみで構成されているかチェック
+          const numA = parseInt(idA, 10);
+          const numB = parseInt(idB, 10);
+          
+          // 両方が数値に変換できる場合は数値として比較
+          if (!isNaN(numA) && !isNaN(numB)) {
+            return numA - numB;
+          }
+          
+          // それ以外は文字列として比較
+          return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
+        });
+        setExportDataCount(sortedData.length);
+        setExportData(sortedData);
       } else {
         setExportDataCount(0);
         setExportData([]);
@@ -214,8 +233,26 @@ export default function AdminPage() {
       
       const exportData = data.attendance || [];
       
+      // 学籍番号順にソート（数値として比較）
+      const sortedExportData = [...exportData].sort((a, b) => {
+        const idA = String(a.student_id || '');
+        const idB = String(b.student_id || '');
+        
+        // 学籍番号が数値のみで構成されているかチェック
+        const numA = parseInt(idA, 10);
+        const numB = parseInt(idB, 10);
+        
+        // 両方が数値に変換できる場合は数値として比較
+        if (!isNaN(numA) && !isNaN(numB)) {
+          return numA - numB;
+        }
+        
+        // それ以外は文字列として比較
+        return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
+      });
+      
       const csvHeaders = ['学籍番号', '日付', '時限', '出欠区分'];
-      const csvData = exportData.map((item: { student_id: string; period?: string; attendance_type: string; timestamp?: string }) => [
+      const csvData = sortedExportData.map((item: { student_id: string; period?: string; attendance_type: string; timestamp?: string }) => [
         item.student_id, // 学籍番号（API側で既に変換済み）
         item.timestamp || selectedDate || new Date().toISOString().split('T')[0], // 日付（APIから取得した形式）
         item.period ? item.period.replace('限', '') : '不明', // 時限（数字のみ）
@@ -770,7 +807,7 @@ export default function AdminPage() {
                     選択された条件に基づく対象者データ（{exportDataCount}件）
                   </p>
                   
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto max-h-96 overflow-y-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-gray-50 border-b">
@@ -782,7 +819,7 @@ export default function AdminPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {exportData.slice(0, 20).map((item, index) => (
+                        {exportData.map((item, index) => (
                           <tr key={index} className="border-b hover:bg-gray-50">
                             <td className="px-3 py-2 text-gray-900">{item.student_id}</td>
                             <td className="px-3 py-2 text-gray-900">{item.name}</td>
@@ -811,16 +848,14 @@ export default function AdminPage() {
                     </table>
                   </div>
                   
-                  {exportDataCount > 20 && (
-                    <div className="mt-4 text-center">
-                      <p className="text-sm text-gray-500">
-                        表示中: 1-20件 / 全{exportDataCount}件
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        全データはCSVファイルでダウンロードできます
-                      </p>
-                    </div>
-                  )}
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-gray-500">
+                      表示中: 全{exportDataCount}件
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      すべてのデータを表示しています
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

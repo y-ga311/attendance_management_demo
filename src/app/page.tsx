@@ -24,11 +24,6 @@ export default function Home() {
     
     const checkOrientation = () => {
       const isPortraitMode = window.innerHeight > window.innerWidth;
-      console.log('画面比率チェック:', {
-        height: window.innerHeight,
-        width: window.innerWidth,
-        isPortrait: isPortraitMode
-      });
       setIsPortrait(isPortraitMode);
     };
     
@@ -197,13 +192,6 @@ export default function Home() {
         </Link>
       </div>
 
-      {/* デバッグ情報（開発時のみ表示） */}
-      {process.env.NODE_ENV === 'development' && isClient && (
-        <div className="absolute top-20 left-4 bg-black bg-opacity-75 text-white p-2 rounded text-xs z-50">
-          <div>画面比率: {isPortrait ? '縦長' : '横長'}</div>
-          <div>サイズ: {window.innerWidth}x{window.innerHeight}</div>
-        </div>
-      )}
 
       {/* 隠しトリガーエリア（画面左上の小さなエリア） */}
       <div 

@@ -8,13 +8,6 @@ export async function GET(req: NextRequest) {
     const filterClass = searchParams.get('class');
     const filterPeriod = searchParams.get('period');
 
-    console.log('CSVエクスポート用データ取得:', {
-      selectedDate,
-      filterClass,
-      filterPeriod
-    });
-
-    console.log('Export API - supabaseAdmin check:', !!supabaseAdmin);
     
     if (!supabaseAdmin) {
       console.error('Export API - Supabase admin client is null');
@@ -70,27 +63,73 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: '出席データの取得に失敗しました' }, { status: 500 });
     }
 
-    // 3. 限目フィルタリング（時間帯に基づく）
+    console.log(`\n=== attend_management取得結果 ===`);
+    console.log(`取得件数: ${attendance?.length || 0}件`);
+    if (attendance && attendance.length > 0) {
+      console.log('全データ:', attendance.map((a: any) => ({
+        id: a.id,
+        attend: a.attend,
+        period: a.period,
+        time: a.time,
+        class: a.class
+      })));
+    }
+
+    // 3. period_settingsテーブルから時間割設定を取得
+    const { data: periodSettings, error: periodError } = await supabaseAdmin
+      .from('period_settings')
+      .select('*');
+
+    if (periodError) {
+      console.error('period_settings取得エラー:', periodError);
+    }
+
+    // 時限と時間帯のマッピングを作成
+    const periodTimeMap: { [key: string]: { start: string; end: string } } = {};
+    if (periodSettings) {
+      periodSettings.forEach((setting: any) => {
+        if (setting.period && setting.start_time && setting.end_time) {
+          periodTimeMap[setting.period] = {
+            start: setting.start_time,
+            end: setting.end_time
+          };
+        }
+      });
+    }
+
+    // 4. 限目フィルタリング（period_settingsに基づく）
     let filteredAttendance: { id: string; attend: string; time: string; period?: string; place?: string }[] = attendance || [];
     if (filterPeriod && filterPeriod !== 'all') {
-      const periodMap: {[key: string]: {start: number, end: number}} = {
-        '1限': {start: 8, end: 10},
-        '2限': {start: 10, end: 12},
-        '3限': {start: 13, end: 15},
-        '4限': {start: 15, end: 17},
-        '5限': {start: 17, end: 19},
-        '6限': {start: 19, end: 21},
-        '7限': {start: 21, end: 23},
-        '8限': {start: 23, end: 24}
-      };
+      const periodTime = periodTimeMap[filterPeriod];
       
-      const period = periodMap[filterPeriod];
-      if (period) {
-        filteredAttendance = filteredAttendance.filter((item: { time: string }) => {
+      if (periodTime) {
+        console.log(`=== 時限フィルタリング開始: ${filterPeriod} ===`);
+        console.log(`時間範囲: ${periodTime.start} - ${periodTime.end}`);
+        
+        filteredAttendance = filteredAttendance.filter((item: { time: string; period?: string }) => {
+          // periodカラムがある場合は優先的に使用
+          if (item.period) {
+            const match = item.period === filterPeriod;
+            console.log(`periodカラムチェック: ${item.period} === ${filterPeriod} → ${match}`);
+            return match;
+          }
+          
+          // periodカラムがない場合は時間で判定
           const itemTime = new Date(item.time);
-          const hour = itemTime.getHours();
-          return hour >= period.start && hour < period.end;
+          const timeStr = itemTime.toLocaleTimeString('ja-JP', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false 
+          });
+          
+          const match = timeStr >= periodTime.start && timeStr <= periodTime.end;
+          console.log(`時間チェック: time=${item.time}, timeStr=${timeStr}, 範囲内=${match}`);
+          return match;
         });
+        
+        console.log(`フィルター後: ${filteredAttendance.length}件`);
+        console.log('フィルター後のデータ:', filteredAttendance.map((a: any) => ({ id: a.id, attend: a.attend, period: a.period })));
       }
     }
 
@@ -106,45 +145,46 @@ export async function GET(req: NextRequest) {
     // 学籍番号の4桁目に0を追加する関数
     const formatStudentId = (studentId: string | number) => {
       const studentIdStr = String(studentId);
-      console.log(`学籍番号変換デバッグ: "${studentIdStr}" (長さ: ${studentIdStr.length})`);
       if (studentIdStr.length >= 4) {
-        const formatted = studentIdStr.slice(0, 3) + '0' + studentIdStr.slice(3);
-        console.log(`学籍番号変換: ${studentIdStr} -> ${formatted}`);
-        return formatted;
+        return studentIdStr.slice(0, 3) + '0' + studentIdStr.slice(3);
       }
-      console.log(`学籍番号変換（短い）: ${studentIdStr} -> ${studentIdStr}`);
       return studentIdStr;
     };
 
     // 4. 学生データと出席データを統合
-    console.log('学生データサンプル:', studentsList.slice(0, 3).map(s => ({ id: s.id, name: s.name, class: s.class })));
+    console.log(`\n=== 学生データと出席データの統合 ===`);
+    console.log(`学生数: ${studentsList.length}件, フィルター済み出席データ: ${filteredAttendance.length}件`);
+    console.log(`学生IDサンプル:`, studentsList.slice(0, 3).map(s => ({ id: s.id, type: typeof s.id })));
+    console.log(`出席データIDサンプル:`, filteredAttendance.map(a => ({ id: a.id, type: typeof a.id })));
     
     const exportData = studentsList.map((student: { id: string; name: string; class: string }) => {
-      console.log(`処理中の学生: ${student.id} (${student.name})`);
-      // 該当学生の出席データを検索
-      const studentAttendance = filteredAttendance.find((att: { id: string; attend: string; time: string; period?: string; place?: string }) => att.id === student.id);
+      // 該当学生の出席データを検索（型を統一して比較）
+      const studentId = String(student.id);
+      const studentAttendance = filteredAttendance.find((att: { id: string; attend: string; time: string; period?: string; place?: string }) => String(att.id) === studentId);
+      
+      if (studentId === '5') {
+        console.log(`\n学籍番号5のデータ統合:`);
+        console.log(`  学生情報:`, student, `(型: ${typeof student.id})`);
+        console.log(`  出席データ検索結果:`, studentAttendance);
+        console.log(`  filteredAttendanceの全ID:`, filteredAttendance.map(a => ({ id: a.id, type: typeof a.id })));
+      }
       
       if (studentAttendance) {
         // 出席データがある場合
-        // 指定された時限の数字を取得
+        // 時限情報を取得（出席データのperiodカラムまたはフィルター条件から）
+        let periodInfo = studentAttendance.period || filterPeriod;
+        
+        // 時限の数字部分を抽出（例: '昼間部2限' -> '2'、'2限' -> '2'）
         let periodNumber = '不明';
-        if (filterPeriod && filterPeriod !== 'all') {
-          // 時限の数字部分を抽出（例: '1限' -> '1'）
-          const match = filterPeriod.match(/(\d+)限/);
-          if (match) {
-            periodNumber = match[1];
-          }
-        } else if (studentAttendance.period) {
-          // 出席データにperiodが設定されている場合、その数字部分を抽出
-          const match = studentAttendance.period.match(/(\d+)限/);
+        if (periodInfo) {
+          const match = periodInfo.match(/(\d+)限/);
           if (match) {
             periodNumber = match[1];
           }
         }
 
-        // 出席データがある場合の日付処理をデバッグ
+        // 出席データがある場合の日付処理
         const timestamp = formatDate(studentAttendance.time);
-        console.log(`出席学生の日付処理: studentAttendance.time=${studentAttendance.time}, timestamp=${timestamp}`);
 
         return {
           id: student.id,
@@ -163,22 +203,20 @@ export async function GET(req: NextRequest) {
         // 指定された時限の数字を取得
         let periodNumber = '不明';
         if (filterPeriod && filterPeriod !== 'all') {
-          // 時限の数字部分を抽出（例: '1限' -> '1'）
+          // 時限の数字部分を抽出（例: '昼間部2限' -> '2'、'2限' -> '2'）
           const match = filterPeriod.match(/(\d+)限/);
           if (match) {
             periodNumber = match[1];
           }
         }
 
-        // 欠席の場合の日付処理をデバッグ
+        // 欠席の場合の日付処理
         let timestamp;
         if (selectedDate) {
           const dateString = selectedDate + 'T00:00:00+09:00';
           timestamp = formatDate(dateString);
-          console.log(`欠席学生の日付処理: selectedDate=${selectedDate}, dateString=${dateString}, timestamp=${timestamp}`);
         } else {
           timestamp = formatDate(new Date().toISOString());
-          console.log(`欠席学生の日付処理（デフォルト）: timestamp=${timestamp}`);
         }
 
         return {
@@ -194,12 +232,6 @@ export async function GET(req: NextRequest) {
           }
         };
       }
-    });
-
-    console.log('エクスポートデータ生成完了:', {
-      totalStudents: studentsList.length,
-      attendanceRecords: filteredAttendance.length,
-      exportRecords: exportData.length
     });
 
     return NextResponse.json({ attendance: exportData });
