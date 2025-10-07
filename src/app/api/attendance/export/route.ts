@@ -172,7 +172,7 @@ export async function GET(req: NextRequest) {
       if (studentAttendance) {
         // 出席データがある場合
         // 時限情報を取得（出席データのperiodカラムまたはフィルター条件から）
-        let periodInfo = studentAttendance.period || filterPeriod;
+        const periodInfo = studentAttendance.period || filterPeriod;
         
         // 時限の数字部分を抽出（例: '昼間部2限' -> '2'、'2限' -> '2'）
         let periodNumber = '不明';
