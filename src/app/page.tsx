@@ -60,41 +60,37 @@ export default function Home() {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden">
+    <div className="relative w-full h-screen overflow-hidden bg-gray-100">
       {/* Background image (responsive) - 縦長画像（ポートレート） */}
-      {isClient && (
-        <Image
-          src="/hero-background.png"
-          alt="アプリ背景（縦長）"
-          fill
-          priority
-          className="object-cover object-center transition-opacity duration-300"
-          style={{
-            opacity: isPortrait ? 1 : 0,
-            zIndex: isPortrait ? 1 : 0,
-            pointerEvents: isPortrait ? 'auto' : 'none'
-          }}
-        />
-      )}
+      <Image
+        src="/hero-background.png"
+        alt="アプリ背景（縦長）"
+        fill
+        priority
+        className="object-cover object-center transition-opacity duration-300"
+        style={{
+          opacity: isClient && isPortrait ? 1 : 0,
+          zIndex: 0,
+          pointerEvents: 'none'
+        }}
+      />
       
       {/* Background image (responsive) - 横長画像（ランドスケープ） */}
-      {isClient && (
-        <Image
-          src="/hero-background2.png"
-          alt="アプリ背景（横長）"
-          fill
-          priority
-          className="object-cover object-center transition-opacity duration-300"
-          style={{
-            opacity: isPortrait ? 0 : 1,
-            zIndex: isPortrait ? 0 : 1,
-            pointerEvents: isPortrait ? 'none' : 'auto'
-          }}
-        />
-      )}
+      <Image
+        src="/hero-background2.png"
+        alt="アプリ背景（横長）"
+        fill
+        priority
+        className="object-cover object-center transition-opacity duration-300"
+        style={{
+          opacity: isClient && !isPortrait ? 1 : 0,
+          zIndex: 0,
+          pointerEvents: 'none'
+        }}
+      />
 
       {/* Overlay (optional, readability for text) */}
-      <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent" style={{ zIndex: 1 }} />
       
 
       {/* 右上のメニュー */}
@@ -185,7 +181,7 @@ export default function Home() {
       )}
       
       {/* 下部のボタンエリア */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-full max-w-sm px-4">
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-full max-w-sm px-4 z-30">
         <Link 
           href="/login"
           className="block w-full navy-button text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 active:scale-95 text-center"
