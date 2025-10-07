@@ -23,6 +23,7 @@ export default function StudentPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
+  const isProcessing = useRef(false);
 
   // 未使用の変数を削除
 
@@ -86,14 +87,14 @@ export default function StudentPage() {
         undefined,
         videoRef.current,
         (result, error) => {
-          if (result) {
+          if (result && !isProcessing.current) {
+            isProcessing.current = true;
             setScanResult(result.getText());
             handleScanResult(result.getText());
             stopScanning();
           }
           if (error && error.name !== 'NotFoundException') {
             console.error('スキャンエラー:', error);
-            setScanError('QRコードの読み取りに失敗しました');
           }
         }
       );
@@ -274,6 +275,7 @@ export default function StudentPage() {
     setScanError(null);
     setAttendanceData(null);
     setScanStatus('idle');
+    isProcessing.current = false;
   };
 
 
