@@ -67,7 +67,7 @@ export default function Home() {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-100 fixed inset-0">
       {/* Background image container with padding for button */}
-      <div className="absolute inset-0 pb-28 sm:pb-20">
+      <div className="absolute inset-0 pb-24">
         {/* Background image (responsive) - 縦長画像（ポートレート） */}
         <Image
           src="/hero-background.png"
@@ -193,7 +193,7 @@ export default function Home() {
       )}
       
       {/* 下部のボタンエリア */}
-      <div className="absolute bottom-12 sm:bottom-8 left-1/2 transform -translate-x-1/2 w-full max-w-sm px-4 z-30">
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-full max-w-sm px-4 z-30">
         <Link 
           href="/login"
           className="block w-full navy-button text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 active:scale-95 text-center"
