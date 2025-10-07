@@ -67,11 +67,13 @@ export default function Home() {
         alt="アプリ背景（縦長）"
         fill
         priority
-        className="object-cover object-center transition-opacity duration-300"
+        className="transition-opacity duration-300"
         style={{
           opacity: isClient && isPortrait ? 1 : 0,
           zIndex: 0,
-          pointerEvents: 'none'
+          pointerEvents: 'none',
+          objectFit: 'contain',
+          objectPosition: 'center'
         }}
       />
       
@@ -81,11 +83,13 @@ export default function Home() {
         alt="アプリ背景（横長）"
         fill
         priority
-        className="object-cover object-center transition-opacity duration-300"
+        className="transition-opacity duration-300"
         style={{
           opacity: isClient && !isPortrait ? 1 : 0,
           zIndex: 0,
-          pointerEvents: 'none'
+          pointerEvents: 'none',
+          objectFit: 'contain',
+          objectPosition: 'center'
         }}
       />
 
