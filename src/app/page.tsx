@@ -73,7 +73,7 @@ export default function Home() {
           zIndex: 0,
           pointerEvents: 'none',
           objectFit: 'cover',
-          objectPosition: '50% 20%'
+          objectPosition: '50% 30%'
         }}
       />
       
@@ -89,7 +89,7 @@ export default function Home() {
           zIndex: 0,
           pointerEvents: 'none',
           objectFit: 'cover',
-          objectPosition: '50% 40%'
+          objectPosition: '50% 50%'
         }}
       />
 
