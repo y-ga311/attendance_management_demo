@@ -13,9 +13,19 @@ export default function Home() {
   const [isPortrait, setIsPortrait] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
-  // クライアントサイドの確認
+  // クライアントサイドの確認とスクロール無効化
   useEffect(() => {
     setIsClient(true);
+    
+    // ホームページでのみスクロールを無効化
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    
+    return () => {
+      // クリーンアップ時にスクロールを有効化
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
   }, []);
 
   // 画面比率の検出
