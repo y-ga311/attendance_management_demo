@@ -72,8 +72,8 @@ export default function Home() {
           opacity: isClient && isPortrait ? 1 : 0,
           zIndex: 0,
           pointerEvents: 'none',
-          objectFit: 'cover',
-          objectPosition: '50% 30%'
+          objectFit: 'contain',
+          objectPosition: '50% 50%'
         }}
       />
       
