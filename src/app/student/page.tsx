@@ -124,13 +124,68 @@ export default function StudentPage() {
       const attendanceInfo = JSON.parse(result);
       console.log('読み取り成功:', attendanceInfo);
       
-      // 現在の日付を取得（YYYY-MM-DD形式）
+      // 現在の日付と時刻を取得
       const now = new Date();
       const todayString = now.toLocaleDateString('ja-JP', { 
         year: 'numeric', 
         month: '2-digit', 
         day: '2-digit' 
       }).replace(/\//g, '-'); // YYYY-MM-DD形式に変換
+      
+      const currentTime = now.toLocaleTimeString('ja-JP', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false 
+      }); // HH:MM:SS形式
+      
+      // 学生のクラスを確認（昼間部 or 夜間部）
+      const studentClassType = studentClass.includes('昼間部') ? '昼間部' : 
+                               studentClass.includes('夜間部') ? '夜間部' : null;
+      
+      console.log('学生クラス情報:', {
+        studentClass: studentClass,
+        classType: studentClassType,
+        currentTime: currentTime
+      });
+      
+      // クラス（昼間部/夜間部）の授業時間チェック
+      if (studentClassType) {
+        try {
+          // period_settingsを取得
+          const periodResponse = await fetch('/api/period-settings');
+          const periodData = await periodResponse.json();
+          
+          if (periodResponse.ok && periodData.settings) {
+            // 学生のクラスタイプに該当する時限を探す
+            const validPeriods = Object.entries(periodData.settings)
+              .filter(([period]) => period.includes(studentClassType))
+              .map(([period, times]: [string, any]) => ({
+                period,
+                start: times.startTime,
+                end: times.endTime
+              }));
+            
+            console.log('学生のクラスに該当する時限:', validPeriods);
+            
+            // 現在時刻がいずれかの授業時間内かチェック
+            const isWithinClassTime = validPeriods.some(p => {
+              return currentTime >= p.start && currentTime <= p.end;
+            });
+            
+            if (!isWithinClassTime) {
+              setScanError(`このQRコードは${studentClassType}の授業時間外です。\n現在時刻: ${currentTime}\n\n${studentClassType}の授業時間を確認してください。`);
+              setScanStatus('error');
+              return;
+            }
+            
+            console.log('授業時間チェック通過');
+          }
+        } catch (error) {
+          console.error('period_settings取得エラー:', error);
+          // エラーが発生しても処理を続行（従来の動作を維持）
+        }
+      }
       
       // 有効日付範囲チェック（新しいロジック：日付範囲）
       if (attendanceInfo.validDateStart && attendanceInfo.validDateEnd) {
