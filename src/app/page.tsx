@@ -101,6 +101,21 @@ export default function Home() {
       {/* Overlay (optional, readability for text) */}
       <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent" style={{ zIndex: 1 }} />
       
+      {/* タイトルテキスト */}
+      <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 text-center w-full px-4">
+        <h1 className="font-black drop-shadow-2xl" style={{ 
+          fontFamily: "'Rounded Mplus 1c', 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', 'メイリオ', sans-serif", 
+          color: '#0284c7',
+          textShadow: '0 6px 30px rgba(0,0,0,0.8), 0 3px 15px rgba(0,0,0,0.6), 0 0 50px rgba(2, 132, 199, 0.8), 0 0 80px rgba(2, 132, 199, 0.4)',
+          fontWeight: 900,
+          WebkitTextStroke: '0.5px rgba(255,255,255,0.8)',
+          letterSpacing: '0.08em',
+          transform: 'scaleY(1.1)',
+          fontSize: 'clamp(2.5rem, 12vw, 8rem)'
+        }}>
+          ピッとすくーる
+        </h1>
+      </div>
 
       {/* 右上のメニュー */}
       <div className="absolute top-4 right-4 flex items-center space-x-4 z-20">
