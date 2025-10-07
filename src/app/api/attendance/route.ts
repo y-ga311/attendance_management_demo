@@ -62,20 +62,25 @@ export async function POST(req: NextRequest) {
     console.log('処理する出席データ:', attendanceData);
 
     // period判定のための時間抽出
+    let period = body.period || null; // QRコードから受け取った時限情報を優先
 
-    // 時間からperiodを判定
-    const attendanceTime = parseJapaneseDate(attendanceData.time);
-    const timeString = attendanceTime.toLocaleTimeString('ja-JP', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: false 
-    });
+    // QRコードに時限情報が含まれていない場合は時間から判定
+    if (!period) {
+      const attendanceTime = parseJapaneseDate(attendanceData.time);
+      const timeString = attendanceTime.toLocaleTimeString('ja-JP', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      });
 
-    // 時間割設定を取得（デフォルト設定を使用）
-    const periodSettings = getDefaultPeriodSettings();
-    const period = getPeriodFromTime(timeString, periodSettings) || '不明';
+      // 時間割設定を取得（デフォルト設定を使用）
+      const periodSettings = getDefaultPeriodSettings();
+      period = getPeriodFromTime(timeString, periodSettings) || '不明';
 
-    console.log('時間判定:', { timeString, period });
+      console.log('時間から自動判定:', { timeString, period });
+    } else {
+      console.log('QRコードから取得した時限:', period);
+    }
 
     // period情報をattendanceDataに追加
     const attendanceDataWithPeriod = {

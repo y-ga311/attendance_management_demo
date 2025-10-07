@@ -124,9 +124,58 @@ export default function StudentPage() {
       const attendanceInfo = JSON.parse(result);
       console.log('読み取り成功:', attendanceInfo);
       
-      // 有効期限チェック
-      if (attendanceInfo.validity) {
-        const now = new Date();
+      // 現在の日付を取得（YYYY-MM-DD形式）
+      const now = new Date();
+      const todayString = now.toLocaleDateString('ja-JP', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+      }).replace(/\//g, '-'); // YYYY-MM-DD形式に変換
+      
+      // 有効日付範囲チェック（新しいロジック：日付範囲）
+      if (attendanceInfo.validDateStart && attendanceInfo.validDateEnd) {
+        const validStart = attendanceInfo.validDateStart;
+        const validEnd = attendanceInfo.validDateEnd;
+        
+        console.log('日付範囲チェック:', {
+          today: todayString,
+          validStart: validStart,
+          validEnd: validEnd
+        });
+        
+        if (todayString < validStart) {
+          setScanError(`このQRコードはまだ有効ではありません。\n有効期限: ${validStart} 〜 ${validEnd}\n現在の日付: ${todayString}`);
+          setScanStatus('error');
+          return;
+        }
+        
+        if (todayString > validEnd) {
+          setScanError(`このQRコードの有効期限が切れています。\n有効期限: ${validStart} 〜 ${validEnd}\n現在の日付: ${todayString}`);
+          setScanStatus('error');
+          return;
+        }
+        
+        console.log('有効日付範囲チェック通過');
+      }
+      // 単一日付チェック（後方互換性）
+      else if (attendanceInfo.validDate) {
+        const validDate = attendanceInfo.validDate;
+        
+        console.log('日付チェック:', {
+          today: todayString,
+          validDate: validDate
+        });
+        
+        if (todayString !== validDate) {
+          setScanError(`このQRコードは ${validDate} のみ有効です。\n現在の日付: ${todayString}`);
+          setScanStatus('error');
+          return;
+        }
+        
+        console.log('有効日付チェック通過');
+      }
+      // 旧形式の有効期限チェック（後方互換性のため残す）
+      else if (attendanceInfo.validity) {
         const startTime = new Date(attendanceInfo.validity.start);
         const endTime = new Date(attendanceInfo.validity.end);
         
@@ -142,7 +191,7 @@ export default function StudentPage() {
           return;
         }
         
-        console.log('有効期限チェック通過:', {
+        console.log('有効期限チェック通過（旧形式）:', {
           now: now.toLocaleString('ja-JP'),
           start: startTime.toLocaleString('ja-JP'),
           end: endTime.toLocaleString('ja-JP')
@@ -179,7 +228,7 @@ export default function StudentPage() {
   };
 
   // 出席データをattend_managementテーブルに挿入
-  const insertAttendanceData = async (attendanceInfo: { type: string; timestamp: string; action: string; location: string }) => {
+  const insertAttendanceData = async (attendanceInfo: { type: string; timestamp: string; action: string; location: string; period?: string }) => {
     try {
       const currentStudent = StudentAuthService.getCurrentStudent();
       if (!currentStudent) {
@@ -219,7 +268,7 @@ export default function StudentPage() {
         attendStatus = '1'; // 教室掲示用QRコードの場合は「1」（出席）
       }
 
-      // 出席データをAPIに送信
+      // 出席データをAPIに送信（時限は時間から自動判定）
       const response = await fetch('/api/attendance', {
         method: 'POST',
         headers: {
@@ -232,6 +281,7 @@ export default function StudentPage() {
           time: getJSTISOString(), // 日本時間で記録
           place: location,
           attend: attendStatus
+          // periodは送信しない（APIで時間から自動判定）
         }),
       });
 

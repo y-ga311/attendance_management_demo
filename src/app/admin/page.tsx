@@ -22,14 +22,13 @@ export default function AdminPage() {
   const [exportData, setExportData] = useState<{ student_id: string; name: string; class: string; attendance_type: string; period?: string }[]>([]);
   
   // QRコード生成用の状態
-  const [qrType, setQrType] = useState<'late' | 'early'>('late');
+  const [qrType, setQrType] = useState<'late' | 'early' | 'attendance'>('attendance');
   const [qrCode, setQrCode] = useState<string>('');
   const [qrGenerated, setQrGenerated] = useState(false);
   
-  // QRコード有効期限設定用の状態
-  const [qrValidityStart, setQrValidityStart] = useState<string>('');
-  const [qrValidityEnd, setQrValidityEnd] = useState<string>('');
-  const [qrValidityEnabled, setQrValidityEnabled] = useState<boolean>(false);
+  // QRコード有効期限設定用の状態（日付範囲）
+  const [qrValidDateStart, setQrValidDateStart] = useState<string>(getJSTDateString());
+  const [qrValidDateEnd, setQrValidDateEnd] = useState<string>(getJSTDateString());
   
   // 授業時間設定用の状態（現在未使用）
   // const [classSettings, setClassSettings] = useState<{[key: string]: {startTime: string, endTime: string}}>({});
@@ -156,36 +155,24 @@ export default function AdminPage() {
   // QRコード生成機能
   const generateQRCode = async () => {
     try {
-      // 有効期限の検証
-      if (qrValidityEnabled) {
-        if (!qrValidityStart || !qrValidityEnd) {
-          alert('有効期限の開始日時と終了日時を設定してください');
-          return;
-        }
-        
-        const startTime = new Date(qrValidityStart);
-        const endTime = new Date(qrValidityEnd);
-        const now = new Date();
-        
-        if (startTime >= endTime) {
-          alert('有効期限の開始日時は終了日時より前である必要があります');
-          return;
-        }
-        
-        if (now > endTime) {
-          alert('有効期限の終了日時は現在時刻より後である必要があります');
-          return;
-        }
+      // 有効日付の検証
+      if (!qrValidDateStart || !qrValidDateEnd) {
+        alert('有効期限の開始日と終了日を設定してください');
+        return;
+      }
+
+      // 日付の妥当性チェック
+      if (qrValidDateStart > qrValidDateEnd) {
+        alert('開始日は終了日より前である必要があります');
+        return;
       }
 
       const qrData = {
         type: qrType,
         timestamp: getJSTISOString(),
-        action: qrType === 'late' ? '遅刻登録' : '早退登録',
-        validity: qrValidityEnabled ? {
-          start: qrValidityStart,
-          end: qrValidityEnd
-        } : null
+        action: qrType === 'late' ? '遅刻登録' : qrType === 'early' ? '早退登録' : '出席登録',
+        validDateStart: qrValidDateStart, // 有効開始日（YYYY-MM-DD形式）
+        validDateEnd: qrValidDateEnd // 有効終了日（YYYY-MM-DD形式）
       };
       
       const qrString = JSON.stringify(qrData);
@@ -430,7 +417,11 @@ export default function AdminPage() {
     try {
       const link = document.createElement('a');
       link.href = qrCode;
-      link.download = `${qrType === 'late' ? '遅刻用' : '早退用'}QRコード_${getJSTDateString()}.png`;
+      const typeLabel = qrType === 'attendance' ? '出席用' : qrType === 'late' ? '遅刻用' : '早退用';
+      const dateRange = qrValidDateStart === qrValidDateEnd 
+        ? qrValidDateStart 
+        : `${qrValidDateStart}_${qrValidDateEnd}`;
+      link.download = `${typeLabel}QRコード_${dateRange}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -518,18 +509,28 @@ export default function AdminPage() {
       <main className="flex-1 px-4 py-6 overflow-auto">
         {activeTab === 'qr' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-6">遅刻/早退用QRコード発行</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-6">出席管理用QRコード発行</h3>
             
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-black mb-2">QRコードの種類</label>
-                <div className="flex space-x-4">
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center text-black font-medium cursor-pointer hover:text-blue-600 transition-colors">
+                    <input
+                      type="radio"
+                      value="attendance"
+                      checked={qrType === 'attendance'}
+                      onChange={(e) => setQrType(e.target.value as 'late' | 'early' | 'attendance')}
+                      className="mr-2 accent-blue-600"
+                    />
+                    出席用
+                  </label>
                   <label className="flex items-center text-black font-medium cursor-pointer hover:text-blue-600 transition-colors">
                     <input
                       type="radio"
                       value="late"
                       checked={qrType === 'late'}
-                      onChange={(e) => setQrType(e.target.value as 'late' | 'early')}
+                      onChange={(e) => setQrType(e.target.value as 'late' | 'early' | 'attendance')}
                       className="mr-2 accent-blue-600"
                     />
                     遅刻用
@@ -539,7 +540,7 @@ export default function AdminPage() {
                       type="radio"
                       value="early"
                       checked={qrType === 'early'}
-                      onChange={(e) => setQrType(e.target.value as 'late' | 'early')}
+                      onChange={(e) => setQrType(e.target.value as 'late' | 'early' | 'attendance')}
                       className="mr-2 accent-blue-600"
                     />
                     早退用
@@ -548,52 +549,37 @@ export default function AdminPage() {
               </div>
 
               {/* 有効期限設定 */}
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center mb-3">
-                  <input
-                    type="checkbox"
-                    id="qrValidityEnabled"
-                    checked={qrValidityEnabled}
-                    onChange={(e) => setQrValidityEnabled(e.target.checked)}
-                    className="mr-2"
-                  />
-                  <label htmlFor="qrValidityEnabled" className="text-sm font-medium text-black">
-                    有効期限を設定する
-                  </label>
-                </div>
-                
-                {qrValidityEnabled && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-1">
-                        有効開始日時
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={qrValidityStart}
-                        onChange={(e) => setQrValidityStart(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-1">
-                        有効終了日時
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={qrValidityEnd}
-                        onChange={(e) => setQrValidityEnd(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                      />
-                    </div>
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <label className="block text-sm font-medium text-blue-900 mb-3">
+                  📅 有効期限（日付範囲）
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      開始日
+                    </label>
+                    <input
+                      type="date"
+                      value={qrValidDateStart}
+                      onChange={(e) => setQrValidDateStart(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                    />
                   </div>
-                )}
-                
-                {qrValidityEnabled && (
-                  <p className="text-xs text-black mt-2">
-                    設定した期間外でQRコードを読み取った場合は無効になります
-                  </p>
-                )}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      終了日
+                    </label>
+                    <input
+                      type="date"
+                      value={qrValidDateEnd}
+                      onChange={(e) => setQrValidDateEnd(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-blue-700 mt-2">
+                  このQRコードは開始日から終了日までの期間有効です。時限は読み取り時刻から自動判定されます。
+                </p>
               </div>
               
               <button
@@ -606,14 +592,30 @@ export default function AdminPage() {
               {qrGenerated && qrCode && (
                 <div className="text-center">
                   <h4 className="text-lg font-bold text-gray-900 mb-4">
-                    {qrType === 'late' ? '遅刻用' : '早退用'}QRコード
+                    {qrType === 'attendance' ? '出席用' : qrType === 'late' ? '遅刻用' : '早退用'}QRコード
                   </h4>
                   <div className="bg-gray-50 p-4 rounded-lg inline-block">
                     <Image src={qrCode} alt="QR Code" width={200} height={200} className="mx-auto" />
                   </div>
-                  <p className="text-sm text-black mt-2">
-                    学生にこのQRコードをスキャンしてもらってください
-                  </p>
+                  <div className="mt-3 space-y-1">
+                    <p className="text-sm font-medium text-blue-900">
+                      📅 有効期限: {qrValidDateStart} 〜 {qrValidDateEnd}
+                    </p>
+                    {qrValidDateStart === qrValidDateEnd && (
+                      <p className="text-xs text-gray-600">
+                        （{qrValidDateStart} のみ有効）
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-600 mt-2">
+                      学生にこのQRコードをスキャンしてもらってください
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      ℹ️ 時限は読み取り時刻から自動判定されます
+                    </p>
+                    <p className="text-xs text-orange-600 font-medium mt-2">
+                      ⚠️ このQRコードは {qrValidDateStart} から {qrValidDateEnd} まで有効です
+                    </p>
+                  </div>
                   <button
                     onClick={downloadQRCode}
                     className="mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200 shadow-md"
