@@ -10,6 +10,40 @@ export default function Home() {
   const [hiddenInput, setHiddenInput] = useState('');
   const [showAdminLink, setShowAdminLink] = useState(false);
   const [inputVisible, setInputVisible] = useState(false);
+  const [isPortrait, setIsPortrait] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // クライアントサイドの確認
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // 画面比率の検出
+  useEffect(() => {
+    if (!isClient) return;
+    
+    const checkOrientation = () => {
+      const isPortraitMode = window.innerHeight > window.innerWidth;
+      console.log('画面比率チェック:', {
+        height: window.innerHeight,
+        width: window.innerWidth,
+        isPortrait: isPortraitMode
+      });
+      setIsPortrait(isPortraitMode);
+    };
+    
+    // 初期チェック
+    checkOrientation();
+    
+    // イベントリスナーを追加
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, [isClient]);
 
   // 隠し入力の検証
   useEffect(() => {
@@ -27,14 +61,37 @@ export default function Home() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {/* Background image (responsive fill) */}
-      <Image
-        src="/hero-background.png"
-        alt="アプリ背景"
-        fill
-        priority
-        className="object-cover object-center md:object-top"
-      />
+      {/* Background image (responsive) - 縦長画像（ポートレート） */}
+      {isClient && (
+        <Image
+          src="/hero-background.png"
+          alt="アプリ背景（縦長）"
+          fill
+          priority
+          className="object-cover object-center transition-opacity duration-300"
+          style={{
+            opacity: isPortrait ? 1 : 0,
+            zIndex: isPortrait ? 1 : 0,
+            pointerEvents: isPortrait ? 'auto' : 'none'
+          }}
+        />
+      )}
+      
+      {/* Background image (responsive) - 横長画像（ランドスケープ） */}
+      {isClient && (
+        <Image
+          src="/hero-background2.png"
+          alt="アプリ背景（横長）"
+          fill
+          priority
+          className="object-cover object-center transition-opacity duration-300"
+          style={{
+            opacity: isPortrait ? 0 : 1,
+            zIndex: isPortrait ? 0 : 1,
+            pointerEvents: isPortrait ? 'none' : 'auto'
+          }}
+        />
+      )}
 
       {/* Overlay (optional, readability for text) */}
       <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent" />
@@ -136,6 +193,14 @@ export default function Home() {
           出席登録する
         </Link>
       </div>
+
+      {/* デバッグ情報（開発時のみ表示） */}
+      {process.env.NODE_ENV === 'development' && isClient && (
+        <div className="absolute top-20 left-4 bg-black bg-opacity-75 text-white p-2 rounded text-xs z-50">
+          <div>画面比率: {isPortrait ? '縦長' : '横長'}</div>
+          <div>サイズ: {window.innerWidth}x{window.innerHeight}</div>
+        </div>
+      )}
 
       {/* 隠しトリガーエリア（画面左上の小さなエリア） */}
       <div 
