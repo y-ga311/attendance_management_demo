@@ -489,6 +489,14 @@ export default function AdminPage() {
           <div className="flex justify-between items-center">
             <h1 className="text-xl font-bold text-gray-900">管理者ダッシュボード</h1>
             <div className="flex space-x-2">
+              <Link
+                href="/classroom-display"
+                target="_blank"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium transition duration-200 shadow-md flex items-center"
+              >
+                <span className="mr-1">🖥️</span>
+                スクリーン用
+              </Link>
               <button
                 onClick={handleLogout}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-medium transition duration-200 shadow-md"
