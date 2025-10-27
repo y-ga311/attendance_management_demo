@@ -86,7 +86,7 @@ export async function getPeriodSettingsFromDB(): Promise<PeriodSettings> {
 
     // データベースの設定をオブジェクト形式に変換
     const settingsObject: PeriodSettings = {};
-    settings.forEach(setting => {
+    (settings as Array<{period: string, start_time: string, end_time: string}>).forEach(setting => {
       settingsObject[setting.period] = {
         startTime: setting.start_time,
         endTime: setting.end_time
