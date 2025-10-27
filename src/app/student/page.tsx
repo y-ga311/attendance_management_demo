@@ -165,7 +165,7 @@ export default function StudentPage() {
         
         // 時間ベースでperiodを補完
         const currentStudent = StudentAuthService.getCurrentStudent();
-        if (currentStudent) {
+        if (currentStudent && currentStudent.class) {
           const studentClass = currentStudent.class;
           let classType = '';
           if (studentClass.includes('昼間部')) {
