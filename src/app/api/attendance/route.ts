@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { getPeriodFromTime, getDefaultPeriodSettings } from '@/lib/period-utils';
+import { getPeriodFromTime, getDefaultPeriodSettings, getPeriodSettingsFromDB } from '@/lib/period-utils';
 
 // 日本語日付文字列を解析する共通関数
 const parseJapaneseDate = (dateString: string): Date => {
@@ -60,12 +60,59 @@ export async function POST(req: NextRequest) {
     };
 
     console.log('処理する出席データ:', attendanceData);
+    console.log('QRコードから受け取ったbody:', body);
+    console.log('QRコードから受け取ったperiod:', body.period);
+    console.log('QRコードから受け取ったperiodの詳細:', {
+      period: body.period,
+      type: typeof body.period,
+      length: body.period?.length,
+      includes昼間部: body.period?.includes('昼間部'),
+      includes夜間部: body.period?.includes('夜間部'),
+      includes限: body.period?.includes('限')
+    });
 
     // period判定のための時間抽出
-    let period = body.period || null; // QRコードから受け取った時限情報を優先
+    let period = body.period || null; // QRコードから受け取った時限情報
+    console.log('初期period値:', period);
+
+    // QRコードから受け取ったperiodを昼間部X限形式に変換
+    if (period && attendanceData.class) {
+      console.log('period変換処理開始:', { period, class: attendanceData.class });
+      
+      // 既に昼間部X限または夜間部X限形式の場合は変換不要
+      if (period.includes('昼間部') || period.includes('夜間部')) {
+        console.log('periodは既に正しい形式です:', period);
+      } else {
+        // 古い形式（例：4限）の場合は変換
+        const studentClass = attendanceData.class;
+        let classType = '';
+        
+        if (studentClass.includes('昼間部')) {
+          classType = '昼間部';
+        } else if (studentClass.includes('夜間部')) {
+          classType = '夜間部';
+        }
+        
+        console.log('判定されたクラスタイプ:', classType);
+        
+        if (classType) {
+          // QRコードから受け取ったperiod（例：4限）を昼間部X限形式に変換
+          const originalPeriod = period;
+          period = `${classType}${period}`;
+          console.log('QRコードから受け取ったperiodを変換:', { originalPeriod, classType, finalPeriod: period });
+        } else {
+          console.log('クラスタイプが判定できませんでした');
+        }
+      }
+    } else {
+      console.log('period変換をスキップ:', { period, hasClass: !!attendanceData.class });
+    }
 
     // QRコードに時限情報が含まれていない場合は時間から判定
     if (!period) {
+      console.log('=== 時間ベース判定開始 ===');
+      console.log('periodがnullまたはundefinedのため、時間ベース判定を実行');
+      
       const attendanceTime = parseJapaneseDate(attendanceData.time);
       const timeString = attendanceTime.toLocaleTimeString('ja-JP', { 
         hour: '2-digit', 
@@ -73,11 +120,66 @@ export async function POST(req: NextRequest) {
         hour12: false 
       });
 
-      // 時間割設定を取得（デフォルト設定を使用）
-      const periodSettings = getDefaultPeriodSettings();
-      period = getPeriodFromTime(timeString, periodSettings) || '不明';
+      // 時間割設定を取得（period_settingsテーブルから動的に取得）
+      const periodSettings = await getPeriodSettingsFromDB();
+      console.log('取得したperiodSettings:', periodSettings);
+      
+      // 学生のクラス情報に基づいて時限を判定
+      let timeBasedPeriod = '不明';
+      if (attendanceData.class) {
+        const studentClass = attendanceData.class;
+        let classType = '';
+        
+        console.log('学生クラス情報:', { studentClass, timeString });
+        
+        if (studentClass.includes('昼間部')) {
+          classType = '昼間部';
+        } else if (studentClass.includes('夜間部')) {
+          classType = '夜間部';
+        }
+        
+        console.log('判定されたクラスタイプ:', classType);
+        
+        if (classType) {
+          // 該当するクラスタイプの時限を検索
+          const matchingPeriod = Object.keys(periodSettings).find(periodKey => {
+            console.log('チェック中の時限:', periodKey);
+            if (periodKey.startsWith(classType)) {
+              const setting = periodSettings[periodKey];
+              const timeToMinutes = (time: string): number => {
+                const [hours, minutes] = time.split(':').map(Number);
+                return hours * 60 + minutes;
+              };
+              
+              const targetMinutes = timeToMinutes(timeString);
+              const startMinutes = timeToMinutes(setting.startTime);
+              const endMinutes = timeToMinutes(setting.endTime);
+              
+              const isMatch = targetMinutes >= startMinutes && targetMinutes < endMinutes;
+              console.log(`時限${periodKey}の時間チェック:`, {
+                targetTime: timeString,
+                targetMinutes,
+                startTime: setting.startTime,
+                startMinutes,
+                endTime: setting.endTime,
+                endMinutes,
+                isMatch
+              });
+              
+              return isMatch;
+            }
+            return false;
+          });
+          
+          timeBasedPeriod = matchingPeriod || '不明';
+          console.log('最終的に選択された時限:', timeBasedPeriod);
+        }
+      } else {
+        console.log('学生クラス情報がありません');
+      }
 
-      console.log('時間から自動判定:', { timeString, period });
+      period = timeBasedPeriod;
+      console.log('時間から自動判定:', { timeString, studentClass: attendanceData.class, finalPeriod: period });
     } else {
       console.log('QRコードから取得した時限:', period);
     }
@@ -88,6 +190,8 @@ export async function POST(req: NextRequest) {
       period: period
     };
 
+    console.log('=== 最終的なperiod値 ===');
+    console.log('最終period:', period);
     console.log('period情報追加後の出席データ:', attendanceDataWithPeriod);
 
     // Supabaseが利用できない場合はファイルベースの保存を使用
@@ -132,17 +236,17 @@ export async function POST(req: NextRequest) {
     const oneMinuteAgo = new Date(currentTime.getTime() - 60 * 1000);
 
       const isDuplicate = data.some((record: { id: string; time: string }) => {
-        if (record.id !== attendanceData.id) return false;
+        if (record.id !== attendanceDataWithPeriod.id) return false;
         const recordTime = parseJapaneseDate(record.time);
         return recordTime >= oneMinuteAgo && recordTime <= currentTime;
       });
 
       if (isDuplicate) {
-        console.log('重複データを検出しました：', attendanceData);
+        console.log('重複データを検出しました：', attendanceDataWithPeriod);
         return NextResponse.json({ message: '既に記録済みです' }, { status: 200 });
       }
 
-      data.push(attendanceData);
+      data.push(attendanceDataWithPeriod);
       
       try {
         const jsonData = JSON.stringify(data, null, 2);
@@ -165,8 +269,8 @@ export async function POST(req: NextRequest) {
       }
       
       console.log('=== ファイル保存成功 ===');
-      console.log('打刻データを受信しました：', attendanceData);
-      return NextResponse.json({ message: '保存しました', data: attendanceData });
+      console.log('打刻データを受信しました：', attendanceDataWithPeriod);
+      return NextResponse.json({ message: '保存しました', data: attendanceDataWithPeriod });
     }
 
     // Supabaseを使用した保存（Service Role KeyでRLSをバイパス）

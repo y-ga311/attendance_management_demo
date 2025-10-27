@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import QRCode from 'qrcode';
 import { getJSTISOString } from '@/lib/date-utils';
+import { getPeriodSettingsFromDB } from '@/lib/period-utils';
 
 export default function ClassroomDisplayPage() {
   const [qrCode, setQrCode] = useState<string>('');
@@ -27,16 +28,66 @@ export default function ClassroomDisplayPage() {
     try {
       setIsGenerating(true);
       
+      // 現在時刻からperiodを判定
+      const currentTime = new Date();
+      const timeString = currentTime.toLocaleTimeString('ja-JP', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      });
+      
+      // period_settingsから現在の時限を判定
+      const periodSettings = await getPeriodSettingsFromDB();
+      let currentPeriod = '不明';
+      
+      // 現在時刻に該当する時限を検索
+      const matchingPeriod = Object.keys(periodSettings).find(periodKey => {
+        const setting = periodSettings[periodKey];
+        const timeToMinutes = (time: string): number => {
+          const [hours, minutes] = time.split(':').map(Number);
+          return hours * 60 + minutes;
+        };
+        
+        const targetMinutes = timeToMinutes(timeString);
+        const startMinutes = timeToMinutes(setting.startTime);
+        const endMinutes = timeToMinutes(setting.endTime);
+        
+        const isMatch = targetMinutes >= startMinutes && targetMinutes < endMinutes;
+        console.log(`時限${periodKey}の時間チェック:`, {
+          targetTime: timeString,
+          targetMinutes,
+          startTime: setting.startTime,
+          startMinutes,
+          endTime: setting.endTime,
+          endMinutes,
+          isMatch
+        });
+        
+        return isMatch;
+      });
+      
+      if (matchingPeriod) {
+        currentPeriod = matchingPeriod;
+        console.log('マッチした時限:', currentPeriod);
+      } else {
+        console.log('マッチする時限が見つかりませんでした');
+      }
+      
+      console.log('QRコード生成時の時限判定:', { timeString, currentPeriod });
+      
       const qrData = {
         type: 'attendance',
         timestamp: getJSTISOString(),
         action: '出席登録',
+        period: currentPeriod, // 現在の時限を追加
         location: {
           address: '大阪市西宮原'
         }
       };
       
+      console.log('QRコードに含まれるデータ:', qrData);
       const qrString = JSON.stringify(qrData);
+      console.log('QRコードの文字列:', qrString);
       const qrCodeDataURL = await QRCode.toDataURL(qrString, {
         width: 400,
         margin: 2,

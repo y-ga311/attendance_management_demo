@@ -1,4 +1,5 @@
 // 時間に基づいてperiodを判定するユーティリティ関数
+import { supabaseAdmin } from '@/lib/supabase';
 
 export interface PeriodSetting {
   startTime: string;
@@ -39,19 +40,65 @@ export function getPeriodFromTime(timeString: string, periodSettings: PeriodSett
 }
 
 /**
- * デフォルトの時間割設定を取得
+ * デフォルトの時間割設定を取得（フォールバック用）
  */
 export function getDefaultPeriodSettings(): PeriodSettings {
   return {
-    '1限': { startTime: '09:00', endTime: '10:30' },
-    '2限': { startTime: '10:40', endTime: '12:10' },
-    '3限': { startTime: '13:00', endTime: '14:30' },
-    '4限': { startTime: '14:40', endTime: '16:10' },
-    '5限': { startTime: '16:20', endTime: '17:50' },
-    '6限': { startTime: '18:00', endTime: '19:30' },
-    '7限': { startTime: '19:40', endTime: '21:10' },
-    '8限': { startTime: '21:20', endTime: '22:50' }
+    '昼間部1限': { startTime: '09:10', endTime: '10:40' },
+    '昼間部2限': { startTime: '10:50', endTime: '12:20' },
+    '昼間部3限': { startTime: '13:20', endTime: '14:50' },
+    '昼間部4限': { startTime: '15:00', endTime: '16:50' },
+    '夜間部1限': { startTime: '18:00', endTime: '19:30' },
+    '夜間部2限': { startTime: '19:40', endTime: '21:10' }
   };
+}
+
+/**
+ * period_settingsテーブルから時間割設定を取得
+ * @returns Promise<PeriodSettings> - 時間割設定オブジェクト
+ */
+export async function getPeriodSettingsFromDB(): Promise<PeriodSettings> {
+  try {
+    console.log('getPeriodSettingsFromDB: 開始');
+    
+    if (!supabaseAdmin) {
+      console.warn('Supabase admin client not available, using default settings');
+      return getDefaultPeriodSettings();
+    }
+
+    console.log('period_settingsテーブルからデータを取得中...');
+    const { data: settings, error } = await supabaseAdmin
+      .from('period_settings')
+      .select('period, start_time, end_time')
+      .order('period');
+
+    if (error) {
+      console.error('period_settings取得エラー:', error);
+      return getDefaultPeriodSettings();
+    }
+
+    console.log('取得したデータ:', settings);
+
+    if (!settings || settings.length === 0) {
+      console.warn('period_settingsテーブルが空、デフォルト設定を使用');
+      return getDefaultPeriodSettings();
+    }
+
+    // データベースの設定をオブジェクト形式に変換
+    const settingsObject = settings.reduce((acc, setting) => {
+      acc[setting.period] = {
+        startTime: setting.start_time,
+        endTime: setting.end_time
+      };
+      return acc;
+    }, {} as PeriodSettings);
+
+    console.log('period_settingsテーブルから設定を取得:', settingsObject);
+    return settingsObject;
+  } catch (error) {
+    console.error('period_settings取得エラー:', error);
+    return getDefaultPeriodSettings();
+  }
 }
 
 /**

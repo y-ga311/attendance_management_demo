@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { AdminAuthService } from '@/lib/admin-auth';
 import QRCode from 'qrcode';
 import { getJSTISOString, getJSTDateString } from '@/lib/date-utils';
+import { getPeriodSettingsFromDB } from '@/lib/period-utils';
 
 // 未使用の型定義を削除
 
@@ -16,10 +17,16 @@ export default function AdminPage() {
   const [selectedDate, setSelectedDate] = useState(getJSTDateString());
   const [filterClass, setFilterClass] = useState<string>('all');
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'qr' | 'export' | 'settings'>('export');
+  const [activeTab, setActiveTab] = useState<'export' | 'data' | 'qr' | 'settings'>('export');
   const [exportDataCount, setExportDataCount] = useState<number>(0);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [exportData, setExportData] = useState<{ student_id: string; name: string; class: string; attendance_type: string; period?: string; read_time?: string; location?: { address: string; coordinates: string } }[]>([]);
+  
+  // 対象者データ一覧の絞り込み用の状態
+  const [searchStudentId, setSearchStudentId] = useState<string>('');
+  const [searchStudentName, setSearchStudentName] = useState<string>('');
+  const [filterAttendanceType, setFilterAttendanceType] = useState<string>('all');
+  const [filterTableClass, setFilterTableClass] = useState<string>('all');
   
   // QRコード生成用の状態
   const [qrType, setQrType] = useState<'late' | 'early' | 'attendance'>('attendance');
@@ -33,17 +40,8 @@ export default function AdminPage() {
   // 授業時間設定用の状態（現在未使用）
   // const [classSettings, setClassSettings] = useState<{[key: string]: {startTime: string, endTime: string}}>({});
   
-  // 時間割設定用の状態
-  const [periodSettings, setPeriodSettings] = useState<{[key: string]: {startTime: string, endTime: string}}>({
-    '1限': { startTime: '09:00', endTime: '10:30' },
-    '2限': { startTime: '10:40', endTime: '12:10' },
-    '3限': { startTime: '13:00', endTime: '14:30' },
-    '4限': { startTime: '14:40', endTime: '16:10' },
-    '5限': { startTime: '16:20', endTime: '17:50' },
-    '6限': { startTime: '18:00', endTime: '19:30' },
-    '7限': { startTime: '19:40', endTime: '21:10' },
-    '8限': { startTime: '21:20', endTime: '22:50' }
-  });
+  // 時間割設定用の状態（現在はperiod_settingsテーブルから動的に取得）
+  const [periodSettings, setPeriodSettings] = useState<{[key: string]: {startTime: string, endTime: string}}>({});
   
   // 新しい限目追加用の状態
   const [newPeriod, setNewPeriod] = useState({ period: '', startTime: '09:00', endTime: '10:30' });
@@ -132,7 +130,7 @@ export default function AdminPage() {
 
   // フィルター条件が変更された時にエクスポートデータ件数を更新
   useEffect(() => {
-    if (activeTab === 'export') {
+    if (activeTab === 'export' || activeTab === 'data') {
       loadExportDataCount();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -156,12 +154,41 @@ export default function AdminPage() {
     }
   };
 
-  // エクスポートタブがアクティブになった時にクラス一覧を取得
+  // エクスポートタブまたはデータタブがアクティブになった時にクラス一覧を取得
   useEffect(() => {
-    if (activeTab === 'export') {
+    if (activeTab === 'export' || activeTab === 'data') {
       loadAvailableClasses();
     }
   }, [activeTab]);
+
+  // 対象者データ一覧の絞り込みロジック
+  const getFilteredExportData = () => {
+    return exportData.filter(item => {
+      // 学籍番号での検索
+      if (searchStudentId && !item.student_id.toLowerCase().includes(searchStudentId.toLowerCase())) {
+        return false;
+      }
+      
+      // 学生名での検索
+      if (searchStudentName && !item.name.toLowerCase().includes(searchStudentName.toLowerCase())) {
+        return false;
+      }
+      
+      // 出欠区分での絞り込み
+      if (filterAttendanceType !== 'all' && item.attendance_type !== filterAttendanceType) {
+        return false;
+      }
+      
+      // クラスでの絞り込み
+      if (filterTableClass !== 'all' && item.class !== filterTableClass) {
+        return false;
+      }
+      
+      return true;
+    });
+  };
+
+  const filteredExportData = getFilteredExportData();
 
 
   // 未使用の関数を削除
@@ -186,10 +213,56 @@ export default function AdminPage() {
         return;
       }
 
+      // 現在時刻からperiodを判定
+      const currentTime = new Date();
+      const timeString = currentTime.toLocaleTimeString('ja-JP', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      });
+      
+      // period_settingsから現在の時限を判定
+      const periodSettings = await getPeriodSettingsFromDB();
+      let currentPeriod = '不明';
+      
+      // 現在時刻に該当する時限を検索
+      const matchingPeriod = Object.keys(periodSettings).find(periodKey => {
+        console.log('QRコード生成時の時限チェック:', periodKey);
+        const setting = periodSettings[periodKey];
+        const timeToMinutes = (time: string): number => {
+          const [hours, minutes] = time.split(':').map(Number);
+          return hours * 60 + minutes;
+        };
+        
+        const targetMinutes = timeToMinutes(timeString);
+        const startMinutes = timeToMinutes(setting.startTime);
+        const endMinutes = timeToMinutes(setting.endTime);
+        
+        const isMatch = targetMinutes >= startMinutes && targetMinutes < endMinutes;
+        console.log(`時限${periodKey}の時間チェック:`, {
+          targetTime: timeString,
+          targetMinutes,
+          startTime: setting.startTime,
+          startMinutes,
+          endTime: setting.endTime,
+          endMinutes,
+          isMatch
+        });
+        
+        return isMatch;
+      });
+      
+      if (matchingPeriod) {
+        currentPeriod = matchingPeriod;
+      }
+      
+      console.log('QRコード生成時の時限判定:', { timeString, currentPeriod });
+
       const qrData = {
         type: qrType,
         timestamp: getJSTISOString(),
         action: qrType === 'late' ? '遅刻登録' : qrType === 'early' ? '早退登録' : '出席登録',
+        period: currentPeriod, // 現在の時限を追加
         validDateStart: qrValidDateStart, // 有効開始日（YYYY-MM-DD形式）
         validDateEnd: qrValidDateEnd // 有効終了日（YYYY-MM-DD形式）
       };
@@ -528,6 +601,16 @@ export default function AdminPage() {
                 CSVエクスポート
               </button>
               <button
+                onClick={() => setActiveTab('data')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition duration-200 ${
+                  activeTab === 'data'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                出席確認
+              </button>
+              <button
                 onClick={() => setActiveTab('qr')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition duration-200 ${
                   activeTab === 'qr'
@@ -809,12 +892,165 @@ export default function AdminPage() {
                 </p>
               )}
               
+              <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  💡 <strong>ヒント:</strong> 詳細なデータ確認や絞り込み機能を使用したい場合は、「出席確認」タブをご利用ください。
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'data' && (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-6">出席確認</h3>
+            
+            <div className="space-y-6">
+              {/* 統合された条件指定フォーム */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-4">🔍 出席データ検索・絞り込み条件</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* 日付選択 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">日付</label>
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black text-sm"
+                    />
+                  </div>
+                  
+                  {/* クラス選択 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">クラス</label>
+                    <select
+                      value={filterClass}
+                      onChange={(e) => setFilterClass(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black text-sm"
+                    >
+                      <option value="all">すべて</option>
+                      {availableClasses.map(className => (
+                        <option key={className} value={className}>{className}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* 限目選択 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">限目</label>
+                    <select
+                      value={filterPeriod}
+                      onChange={(e) => setFilterPeriod(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black text-sm"
+                    >
+                      <option value="all">すべて</option>
+                      {Object.keys(periodSettings)
+                        .sort((a, b) => {
+                          // 数字部分でソート（例: 1限, 2限, 10限）
+                          const aNum = parseInt(a.replace('限', ''));
+                          const bNum = parseInt(b.replace('限', ''));
+                          return aNum - bNum;
+                        })
+                        .map((period) => (
+                          <option key={period} value={period}>
+                            {period}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  
+                  {/* 学籍番号検索 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">学籍番号</label>
+                    <input
+                      type="text"
+                      placeholder="学籍番号を入力"
+                      value={searchStudentId}
+                      onChange={(e) => setSearchStudentId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black text-sm"
+                    />
+                  </div>
+                  
+                  {/* 学生名検索 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">学生名</label>
+                    <input
+                      type="text"
+                      placeholder="学生名を入力"
+                      value={searchStudentName}
+                      onChange={(e) => setSearchStudentName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black text-sm"
+                    />
+                  </div>
+                  
+                  {/* 出欠区分絞り込み */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">出欠区分</label>
+                    <select
+                      value={filterAttendanceType}
+                      onChange={(e) => setFilterAttendanceType(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black text-sm"
+                    >
+                      <option value="all">すべて</option>
+                      <option value="1">出席</option>
+                      <option value="2">欠席</option>
+                      <option value="3">遅刻</option>
+                      <option value="4">早退</option>
+                    </select>
+                  </div>
+                  
+                  
+                  {/* クラス絞り込み */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">クラス絞り込み</label>
+                    <select
+                      value={filterTableClass}
+                      onChange={(e) => setFilterTableClass(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black text-sm"
+                    >
+                      <option value="all">すべて</option>
+                      {availableClasses.map(className => (
+                        <option key={className} value={className}>{className}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* リセットボタン */}
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => {
+                        setSearchStudentId('');
+                        setSearchStudentName('');
+                        setFilterAttendanceType('all');
+                        setFilterTableClass('all');
+                      }}
+                      className="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md font-medium transition duration-200 text-sm"
+                    >
+                      リセット
+                    </button>
+                  </div>
+                </div>
+                
+                {/* 絞り込み結果表示 */}
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>検索結果:</strong> {filteredExportData.length}件 / {exportDataCount}件
+                    {filteredExportData.length !== exportDataCount && (
+                      <span className="ml-2 text-blue-600">
+                        （{exportDataCount - filteredExportData.length}件が非表示）
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              
               {/* 対象者データ表示 */}
               {exportDataCount > 0 && (
-                <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4">👥 対象者データ一覧</h4>
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <h4 className="text-lg font-bold text-gray-900 mb-4">👥 出席データ一覧</h4>
                   <p className="text-sm text-gray-600 mb-4">
-                    選択された条件に基づく対象者データ（{exportDataCount}件）
+                    選択された条件に基づく出席データ（{exportDataCount}件）
                   </p>
                   
                   <div className="overflow-x-auto max-h-96 overflow-y-auto">
@@ -831,7 +1067,7 @@ export default function AdminPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {exportData.map((item, index) => (
+                        {filteredExportData.map((item, index) => (
                           <tr key={index} className="border-b hover:bg-gray-50">
                             <td className="px-3 py-2 text-gray-900">{item.student_id}</td>
                             <td className="px-3 py-2 text-gray-900">{item.name}</td>
@@ -868,12 +1104,26 @@ export default function AdminPage() {
                   
                   <div className="mt-4 text-center">
                     <p className="text-sm text-gray-500">
-                      表示中: 全{exportDataCount}件
+                      表示中: {filteredExportData.length}件 / 全{exportDataCount}件
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      すべてのデータを表示しています
-                    </p>
+                    {filteredExportData.length !== exportDataCount && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        絞り込み条件により {exportDataCount - filteredExportData.length}件が非表示
+                      </p>
+                    )}
+                    {filteredExportData.length === exportDataCount && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        すべてのデータを表示しています
+                      </p>
+                    )}
                   </div>
+                </div>
+              )}
+              
+              {exportDataCount === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">表示するデータがありません</p>
+                  <p className="text-sm text-gray-400">条件設定を確認してください</p>
                 </div>
               )}
             </div>
@@ -909,7 +1159,7 @@ export default function AdminPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-medium text-blue-900 mb-2">設定説明</h4>
                 <p className="text-blue-800 text-sm">
-                  各限目の時間を設定してください。学生がQRコードを読み取った時間に基づいて、自動的に該当する限目が判定されます。
+                  各限目の時間を設定してください。学生がQRコードを読み取った時間とクラス（昼間部/夜間部）に基づいて、自動的に該当する限目（例：昼間部3限）が判定されます。
                 </p>
               </div>
 
@@ -923,7 +1173,7 @@ export default function AdminPage() {
                       <label className="block text-sm font-medium text-black mb-2">限目名</label>
                       <input
                         type="text"
-                        placeholder="例: 9限"
+                        placeholder="例: 昼間部6限 または 夜間部4限"
                         value={newPeriod.period}
                         onChange={(e) => setNewPeriod({...newPeriod, period: e.target.value})}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-black"

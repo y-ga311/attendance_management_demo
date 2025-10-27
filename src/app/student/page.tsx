@@ -87,10 +87,27 @@ export default function StudentPage() {
         undefined,
         videoRef.current,
         (result, error) => {
+          // NotFoundExceptionは正常な動作（QRコードが見つからない）
+          if (error && error.name === 'NotFoundException') {
+            return; // ログを出力せずにスキップ
+          }
+          
+          console.log('=== QRコードスキャンコールバック ===');
+          console.log('result:', result);
+          console.log('error:', error);
+          console.log('isProcessing.current:', isProcessing.current);
+          
           if (result && !isProcessing.current) {
+            console.log('QRコードスキャン成功、処理開始');
             isProcessing.current = true;
-            setScanResult(result.getText());
-            handleScanResult(result.getText());
+            const scanText = result.getText();
+            console.log('スキャンされたテキスト:', scanText);
+            console.log('スキャンされたテキストの長さ:', scanText.length);
+            console.log('スキャンされたテキストの型:', typeof scanText);
+            setScanResult(scanText);
+            console.log('handleScanResult呼び出し前');
+            handleScanResult(scanText);
+            console.log('handleScanResult呼び出し後');
             stopScanning();
           }
           if (error && error.name !== 'NotFoundException') {
@@ -119,11 +136,87 @@ export default function StudentPage() {
 
   const handleScanResult = async (result: string) => {
     try {
+      console.log('=== QRコード読み取り開始 ===');
+      console.log('読み取った文字列:', result);
+      
       setScanStatus('processing');
       setScanError(null);
       
       const attendanceInfo = JSON.parse(result);
+      console.log('=== QRコード読み取りデバッグ ===');
       console.log('読み取り成功:', attendanceInfo);
+      console.log('attendanceInfo.period:', attendanceInfo.period);
+      console.log('attendanceInfo.type:', attendanceInfo.type);
+      console.log('attendanceInfo.action:', attendanceInfo.action);
+      console.log('attendanceInfo全体:', JSON.stringify(attendanceInfo, null, 2));
+      
+      // periodの詳細チェック
+      if (attendanceInfo.period) {
+        console.log('QRコードのperiod詳細:', {
+          period: attendanceInfo.period,
+          type: typeof attendanceInfo.period,
+          length: attendanceInfo.period.length,
+          includes昼間部: attendanceInfo.period.includes('昼間部'),
+          includes夜間部: attendanceInfo.period.includes('夜間部'),
+          includes限: attendanceInfo.period.includes('限')
+        });
+      } else {
+        console.log('QRコードにperiodが含まれていません。時間ベースで補完します。');
+        
+        // 時間ベースでperiodを補完
+        const currentStudent = StudentAuthService.getCurrentStudent();
+        if (currentStudent) {
+          const studentClass = currentStudent.class;
+          let classType = '';
+          if (studentClass.includes('昼間部')) {
+            classType = '昼間部';
+          } else if (studentClass.includes('夜間部')) {
+            classType = '夜間部';
+          }
+          
+          console.log('学生クラス情報:', { studentClass, classType, currentTime: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false }) });
+          
+          if (classType) {
+            // 現在時刻に基づいてperiodを判定
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ja-JP', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: false 
+            });
+            
+            // 時間ベースのperiod判定（簡易版）
+            let estimatedPeriod = '不明';
+            const timeToMinutes = (time: string): number => {
+              const [hours, minutes] = time.split(':').map(Number);
+              return hours * 60 + minutes;
+            };
+            
+            const targetMinutes = timeToMinutes(timeString);
+            
+            if (classType === '昼間部') {
+              if (targetMinutes >= 550 && targetMinutes < 640) { // 09:10-10:40
+                estimatedPeriod = '昼間部1限';
+              } else if (targetMinutes >= 650 && targetMinutes < 740) { // 10:50-12:20
+                estimatedPeriod = '昼間部2限';
+              } else if (targetMinutes >= 800 && targetMinutes < 890) { // 13:20-14:50
+                estimatedPeriod = '昼間部3限';
+              } else if (targetMinutes >= 900 && targetMinutes < 1130) { // 15:00-18:50
+                estimatedPeriod = '昼間部4限';
+              }
+            } else if (classType === '夜間部') {
+              if (targetMinutes >= 1080 && targetMinutes < 1170) { // 18:00-19:30
+                estimatedPeriod = '夜間部1限';
+              } else if (targetMinutes >= 1180 && targetMinutes < 1270) { // 19:40-21:10
+                estimatedPeriod = '夜間部2限';
+              }
+            }
+            
+            console.log('時間ベースで補完したperiod:', estimatedPeriod);
+            attendanceInfo.period = estimatedPeriod;
+          }
+        }
+      }
       
       // 現在の日付と時刻を取得
       const now = new Date();
@@ -264,6 +357,9 @@ export default function StudentPage() {
       setScanResult('出席登録が完了しました！');
       
     } catch (error) {
+      console.error('=== QRコード読み取りエラー ===');
+      console.error('エラー詳細:', error);
+      console.error('読み取った文字列:', result);
       console.error('QRコードデータの解析エラー:', error);
       setScanError('無効なQRコードです');
       setScanStatus('error');
@@ -325,7 +421,17 @@ export default function StudentPage() {
         attendStatus = '1'; // 教室掲示用QRコードの場合は「1」（出席）
       }
 
-      // 出席データをAPIに送信（時限は時間から自動判定）
+      // 出席データをAPIに送信（QRコードから受け取ったperiodとtimestampを使用）
+      console.log('API送信データ:', {
+        id: currentStudent.id,
+        name: currentStudent.name,
+        class: currentStudent.class,
+        time: attendanceInfo.timestamp || getJSTISOString(), // QRコードのtimestampを優先使用
+        place: location,
+        attend: attendStatus,
+        period: attendanceInfo.period
+      });
+      
       const response = await fetch('/api/attendance', {
         method: 'POST',
         headers: {
@@ -335,10 +441,10 @@ export default function StudentPage() {
           id: currentStudent.id,
           name: currentStudent.name,
           class: currentStudent.class,
-          time: getJSTISOString(), // 日本時間で記録
+          time: attendanceInfo.timestamp || getJSTISOString(), // QRコードのtimestampを優先使用
           place: location,
-          attend: attendStatus
-          // periodは送信しない（APIで時間から自動判定）
+          attend: attendStatus,
+          period: attendanceInfo.period // QRコードから受け取ったperiodを送信
         }),
       });
 
