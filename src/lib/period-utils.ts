@@ -85,13 +85,13 @@ export async function getPeriodSettingsFromDB(): Promise<PeriodSettings> {
     }
 
     // データベースの設定をオブジェクト形式に変換
-    const settingsObject = settings.reduce((acc, setting) => {
-      acc[setting.period] = {
+    const settingsObject: PeriodSettings = {};
+    settings.forEach(setting => {
+      settingsObject[setting.period] = {
         startTime: setting.start_time,
         endTime: setting.end_time
       };
-      return acc;
-    }, {} as PeriodSettings);
+    });
 
     console.log('period_settingsテーブルから設定を取得:', settingsObject);
     return settingsObject;
