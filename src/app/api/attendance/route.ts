@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { getPeriodFromTime, getDefaultPeriodSettings, getPeriodSettingsFromDB } from '@/lib/period-utils';
+import { getPeriodSettingsFromDB } from '@/lib/period-utils';
 
 // 日本語日付文字列を解析する共通関数
 const parseJapaneseDate = (dateString: string): Date => {
