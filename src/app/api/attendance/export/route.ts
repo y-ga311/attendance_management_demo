@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
     console.log('=== attend_management取得結果 ===');
     console.log('取得件数:', attendance?.length || 0);
     if (attendance && attendance.length > 0) {
-      console.log('最初の3件のtimestampフィールド:', attendance.slice(0, 3).map(a => a.timestamp));
+      console.log('最初の3件のtimestampフィールド:', attendance.slice(0, 3).map((a: any) => a.timestamp));
     }
 
     if (attendanceError) {
@@ -255,7 +255,7 @@ export async function GET(req: NextRequest) {
     console.log('学生数:', studentsList.length);
     console.log('フィルター済み出席データ数:', filteredAttendance.length);
     console.log('学生IDサンプル:', studentsList.slice(0, 3).map(s => s.id));
-    console.log('出席データIDサンプル:', filteredAttendance.slice(0, 3).map(a => a.id));
+    console.log('出席データIDサンプル:', filteredAttendance.slice(0, 3).map((a: any) => a.id));
     
     const exportData = await Promise.all(studentsList.map(async (student: { id: string; name: string; class: string }) => {
       // 該当学生の出席データを検索（型を統一して比較）
@@ -267,7 +267,7 @@ export async function GET(req: NextRequest) {
         console.log(`学生ID ${studentId} のマッチング:`, {
           studentId,
           studentAttendance: studentAttendance ? '見つかった' : '見つからない',
-          attendanceId: studentAttendance?.id
+          attendanceId: (studentAttendance as any)?.id
         });
       }
       
