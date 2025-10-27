@@ -115,6 +115,8 @@ export default function AdminPage() {
           // それ以外は文字列として比較
           return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
         });
+        
+        
         setExportDataCount(sortedData.length);
         setExportData(sortedData);
       } else {

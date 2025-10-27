@@ -8,6 +8,11 @@ export async function GET(req: NextRequest) {
     const filterClass = searchParams.get('class');
     const filterPeriod = searchParams.get('period');
 
+    // パラメータの検証
+    if (!selectedDate) {
+      console.error('selectedDate is required');
+      return NextResponse.json({ error: '日付が指定されていません' }, { status: 400 });
+    }
     
     if (!supabaseAdmin) {
       console.error('Export API - Supabase admin client is null');
@@ -42,38 +47,49 @@ export async function GET(req: NextRequest) {
       .from('attend_management')
       .select('*');
 
-    if (selectedDate) {
-      // 日付フィルタリング（JST基準）
-      const startDate = new Date(selectedDate + 'T00:00:00+09:00');
-      const endDate = new Date(selectedDate + 'T23:59:59+09:00');
-      
-      attendanceQuery = attendanceQuery
-        .gte('time', startDate.toISOString())
-        .lte('time', endDate.toISOString());
-    }
+    // 日付フィルタリングは一時的に無効化（デバッグ用）
+    // if (selectedDate) {
+    //   // 日付形式を変換（2025-10-27 -> 20251027）
+    //   const dateString = selectedDate.replace(/-/g, '');
+    //   
+    //   console.log('=== 日付フィルタリングデバッグ ===');
+    //   console.log('selectedDate:', selectedDate);
+    //   console.log('変換後のdateString:', dateString);
+    //   
+    //   // timestampフィールドで日付フィルタリング（20251027形式）
+    //   // 実際のデータは "20251026" 形式なので、完全一致で検索
+    //   attendanceQuery = attendanceQuery.eq('timestamp', dateString);
+    // }
 
     if (filterClass && filterClass !== 'all') {
       attendanceQuery = attendanceQuery.eq('class', filterClass);
     }
 
+    // periodフィルタリングは後でクライアント側で処理
+
     const { data: attendance, error: attendanceError } = await attendanceQuery;
+
+    console.log('=== attend_management取得結果 ===');
+    console.log('取得件数:', attendance?.length || 0);
+    if (attendance && attendance.length > 0) {
+      console.log('最初の3件のtimestampフィールド:', attendance.slice(0, 3).map(a => a.timestamp));
+    }
 
     if (attendanceError) {
       console.error('出席データ取得エラー:', attendanceError);
-      return NextResponse.json({ error: '出席データの取得に失敗しました' }, { status: 500 });
+      console.error('エラー詳細:', JSON.stringify(attendanceError, null, 2));
+      return NextResponse.json({ 
+        error: '出席データの取得に失敗しました', 
+        details: attendanceError,
+        debug: {
+          selectedDate,
+          filterClass,
+          filterPeriod,
+          dateString: selectedDate ? selectedDate.replace(/-/g, '') : null
+        }
+      }, { status: 500 });
     }
 
-    console.log(`\n=== attend_management取得結果 ===`);
-    console.log(`取得件数: ${attendance?.length || 0}件`);
-    if (attendance && attendance.length > 0) {
-      console.log('全データ:', attendance.map((a: any) => ({
-        id: a.id,
-        attend: a.attend,
-        period: a.period,
-        time: a.time,
-        class: a.class
-      })));
-    }
 
     // 3. period_settingsテーブルから時間割設定を取得
     const { data: periodSettings, error: periodError } = await supabaseAdmin
@@ -103,14 +119,25 @@ export async function GET(req: NextRequest) {
       const periodTime = periodTimeMap[filterPeriod];
       
       if (periodTime) {
-        console.log(`=== 時限フィルタリング開始: ${filterPeriod} ===`);
-        console.log(`時間範囲: ${periodTime.start} - ${periodTime.end}`);
-        
         filteredAttendance = filteredAttendance.filter((item: { time: string; period?: string }) => {
           // periodカラムがある場合は優先的に使用
           if (item.period) {
-            const match = item.period === filterPeriod;
-            console.log(`periodカラムチェック: ${item.period} === ${filterPeriod} → ${match}`);
+            // 昼間部4限 -> 4限 の変換
+            let itemPeriod = item.period;
+            if (itemPeriod.includes('昼間部')) {
+              itemPeriod = itemPeriod.replace('昼間部', '');
+            } else if (itemPeriod.includes('夜間部')) {
+              itemPeriod = itemPeriod.replace('夜間部', '');
+            }
+            
+            let targetPeriod = filterPeriod;
+            if (targetPeriod.includes('昼間部')) {
+              targetPeriod = targetPeriod.replace('昼間部', '');
+            } else if (targetPeriod.includes('夜間部')) {
+              targetPeriod = targetPeriod.replace('夜間部', '');
+            }
+            
+            const match = itemPeriod === targetPeriod;
             return match;
           }
           
@@ -124,12 +151,8 @@ export async function GET(req: NextRequest) {
           });
           
           const match = timeStr >= periodTime.start && timeStr <= periodTime.end;
-          console.log(`時間チェック: time=${item.time}, timeStr=${timeStr}, 範囲内=${match}`);
           return match;
         });
-        
-        console.log(`フィルター後: ${filteredAttendance.length}件`);
-        console.log('フィルター後のデータ:', filteredAttendance.map((a: any) => ({ id: a.id, attend: a.attend, period: a.period })));
       }
     }
 
@@ -228,21 +251,24 @@ export async function GET(req: NextRequest) {
     };
 
     // 4. 学生データと出席データを統合
-    console.log(`\n=== 学生データと出席データの統合 ===`);
-    console.log(`学生数: ${studentsList.length}件, フィルター済み出席データ: ${filteredAttendance.length}件`);
-    console.log(`学生IDサンプル:`, studentsList.slice(0, 3).map(s => ({ id: s.id, type: typeof s.id })));
-    console.log(`出席データIDサンプル:`, filteredAttendance.map(a => ({ id: a.id, type: typeof a.id })));
+    console.log('=== データ統合デバッグ ===');
+    console.log('学生数:', studentsList.length);
+    console.log('フィルター済み出席データ数:', filteredAttendance.length);
+    console.log('学生IDサンプル:', studentsList.slice(0, 3).map(s => s.id));
+    console.log('出席データIDサンプル:', filteredAttendance.slice(0, 3).map(a => a.id));
     
     const exportData = await Promise.all(studentsList.map(async (student: { id: string; name: string; class: string }) => {
       // 該当学生の出席データを検索（型を統一して比較）
       const studentId = String(student.id);
       const studentAttendance = filteredAttendance.find((att: { id: string; attend: string; time: string; period?: string; place?: string }) => String(att.id) === studentId);
       
-      if (studentId === '5') {
-        console.log(`\n学籍番号5のデータ統合:`);
-        console.log(`  学生情報:`, student, `(型: ${typeof student.id})`);
-        console.log(`  出席データ検索結果:`, studentAttendance);
-        console.log(`  filteredAttendanceの全ID:`, filteredAttendance.map(a => ({ id: a.id, type: typeof a.id })));
+      // デバッグ用：特定の学生のマッチング状況を確認
+      if (studentId === '5' || studentId === '2340002') {
+        console.log(`学生ID ${studentId} のマッチング:`, {
+          studentId,
+          studentAttendance: studentAttendance ? '見つかった' : '見つからない',
+          attendanceId: studentAttendance?.id
+        });
       }
       
       if (studentAttendance) {
