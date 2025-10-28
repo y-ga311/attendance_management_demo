@@ -110,7 +110,28 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 日付をYYYYMMDD形式に変換する関数（UTC時間の日付部分をそのまま使用）
+    // 時間を「何時何分」形式に変換する関数（UTC時間をそのまま表示）
+  const formatTimeToJapanese = (timeString: string): string => {
+    try {
+      const date = new Date(timeString);
+      const hour = date.getUTCHours();
+      const minute = date.getUTCMinutes();
+      
+      console.log('時間変換デバッグ:', {
+        original: timeString,
+        utcHour: hour,
+        utcMinute: minute,
+        result: `${hour}時${minute}分`
+      });
+      
+      return `${hour}時${minute}分`;
+    } catch (error) {
+      console.error('時間変換エラー:', error);
+      return '不明';
+    }
+  };
+
+  // 日付をYYYYMMDD形式に変換する関数（UTC時間の日付部分をそのまま使用）
     const formatDate = (dateString: string) => {
       // UTC時間のISO文字列をDateオブジェクトに変換
       const date = new Date(dateString);
@@ -374,7 +395,8 @@ export async function GET(req: NextRequest) {
           date: timestamp,
           period: periodNumber,
           attendance_status: studentAttendance.attend,
-          place: address
+          place: address,
+          read_time: formatTimeToJapanese(studentAttendance.time)
         };
       } else {
         // 出席データがない場合（欠席）
@@ -407,7 +429,8 @@ export async function GET(req: NextRequest) {
           date: timestamp,
           period: periodNumber,
           attendance_status: '2',
-          place: '不明'
+          place: '不明',
+          read_time: '不明'
         };
       }
     }));
