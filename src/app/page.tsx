@@ -56,8 +56,9 @@ export default function Home() {
 
   return (
     <div className="relative w-full min-h-screen bg-gray-100">
-      {/* Background image (responsive) - 縦長画像（ポートレート） */}
+      {/* Background image container */}
       <div className="relative w-full h-screen">
+        {/* Background image (responsive) - 縦長画像（ポートレート） */}
         <Image
           src="/hero-background.png"
           alt="アプリ背景（縦長）"
@@ -69,13 +70,11 @@ export default function Home() {
             zIndex: 0,
             pointerEvents: 'none',
             objectFit: 'cover',
-            objectPosition: '50% 40%'
+            objectPosition: 'center center'
           }}
         />
-      </div>
-      
-      {/* Background image (responsive) - 横長画像（ランドスケープ） */}
-      <div className="relative w-full h-screen">
+        
+        {/* Background image (responsive) - 横長画像（ランドスケープ） */}
         <Image
           src="/hero-background2.png"
           alt="アプリ背景（横長）"
@@ -87,28 +86,28 @@ export default function Home() {
             zIndex: 0,
             pointerEvents: 'none',
             objectFit: 'cover',
-            objectPosition: '50% 50%'
+            objectPosition: 'center center'
           }}
         />
-      </div>
 
-      {/* Overlay (optional, readability for text) */}
-      <div className="absolute top-0 left-0 w-full h-screen bg-gradient-to-t from-white/60 via-transparent to-transparent" style={{ zIndex: 1 }} />
-      
-      {/* タイトルテキスト */}
-      <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 text-center w-full px-4" style={{ top: '33vh' }}>
-        <h1 className="font-black whitespace-nowrap overflow-hidden text-ellipsis" style={{ 
-          fontFamily: "'Rounded Mplus 1c', 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', 'メイリオ', sans-serif", 
-          color: '#0284c7',
-          fontWeight: 900,
-          WebkitTextStroke: '0.5px rgba(255,255,255,0.8)',
-          letterSpacing: '0.08em',
-          transform: 'scaleY(1.1)',
-          fontSize: 'clamp(1.8rem, 11vw, 8rem)',
-          maxWidth: '95vw'
-        }}>
-          ピッとすくーる
-        </h1>
+        {/* Overlay (optional, readability for text) */}
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-white/60 via-transparent to-transparent" style={{ zIndex: 1 }} />
+        
+        {/* タイトルテキスト */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 text-center w-full px-4">
+          <h1 className="font-black whitespace-nowrap overflow-hidden text-ellipsis" style={{ 
+            fontFamily: "'Rounded Mplus 1c', 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', 'メイリオ', sans-serif", 
+            color: '#0284c7',
+            fontWeight: 900,
+            WebkitTextStroke: '0.5px rgba(255,255,255,0.8)',
+            letterSpacing: '0.08em',
+            transform: 'scaleY(1.1)',
+            fontSize: 'clamp(1.8rem, 11vw, 8rem)',
+            maxWidth: '95vw'
+          }}>
+            ピッとすくーる
+          </h1>
+        </div>
       </div>
 
       {/* 右上のメニュー */}
