@@ -1019,7 +1019,7 @@ export default function AdminPage() {
                           <th className="px-3 py-2 text-left font-medium text-gray-700">日付</th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700">時限</th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700">出欠区分</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">読み取り時間</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700">読取時間</th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700">位置情報</th>
                         </tr>
                       </thead>
