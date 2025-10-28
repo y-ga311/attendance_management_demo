@@ -293,18 +293,10 @@ export async function GET(req: NextRequest) {
         const address = await getAddressFromCoordinates(studentAttendance.place || '');
 
         return {
-          id: student.id,
-          name: student.name,
           student_id: formatStudentId(student.id),
-          class: student.class,
-          attendance_type: studentAttendance.attend,
-          timestamp: timestamp,
+          date: timestamp,
           period: periodNumber,
-          read_time: readTime,
-          location: {
-            address: address,
-            coordinates: studentAttendance.place || ''
-          }
+          attendance_status: studentAttendance.attend
         };
       } else {
         // 出席データがない場合（欠席）
@@ -328,18 +320,10 @@ export async function GET(req: NextRequest) {
         }
 
         return {
-          id: student.id,
-          name: student.name,
           student_id: formatStudentId(student.id),
-          class: student.class,
-          attendance_type: '2', // 欠席
-          timestamp: timestamp,
+          date: timestamp,
           period: periodNumber,
-          read_time: '',
-          location: {
-            address: '',
-            coordinates: ''
-          }
+          attendance_status: '2'
         };
       }
     }));

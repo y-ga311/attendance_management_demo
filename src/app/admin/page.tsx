@@ -20,13 +20,11 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'export' | 'data' | 'qr' | 'settings'>('export');
   const [exportDataCount, setExportDataCount] = useState<number>(0);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
-  const [exportData, setExportData] = useState<{ student_id: string; name: string; class: string; attendance_type: string; period?: string; read_time?: string; location?: { address: string; coordinates: string } }[]>([]);
+  const [exportData, setExportData] = useState<{ student_id: string; date: string; period: string; attendance_status: string }[]>([]);
   
   // 対象者データ一覧の絞り込み用の状態
   const [searchStudentId, setSearchStudentId] = useState<string>('');
-  const [searchStudentName, setSearchStudentName] = useState<string>('');
   const [filterAttendanceType, setFilterAttendanceType] = useState<string>('all');
-  const [filterTableClass, setFilterTableClass] = useState<string>('all');
   
   // QRコード生成用の状態
   const [qrType, setQrType] = useState<'late' | 'early' | 'attendance'>('attendance');
@@ -171,18 +169,8 @@ export default function AdminPage() {
         return false;
       }
       
-      // 学生名での検索
-      if (searchStudentName && !item.name.toLowerCase().includes(searchStudentName.toLowerCase())) {
-        return false;
-      }
-      
       // 出欠区分での絞り込み
-      if (filterAttendanceType !== 'all' && item.attendance_type !== filterAttendanceType) {
-        return false;
-      }
-      
-      // クラスでの絞り込み
-      if (filterTableClass !== 'all' && item.class !== filterTableClass) {
+      if (filterAttendanceType !== 'all' && item.attendance_status !== filterAttendanceType) {
         return false;
       }
       
@@ -326,14 +314,12 @@ export default function AdminPage() {
         return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
       });
       
-      const csvHeaders = ['学籍番号', '日付', '時限', '出欠区分', '読取時間', '場所'];
-      const csvData = sortedExportData.map((item: { student_id: string; period?: string; attendance_type: string; timestamp?: string; read_time?: string; location?: { address: string } }) => [
-        item.student_id, // 学籍番号（API側で既に変換済み）
-        item.timestamp || selectedDate || new Date().toISOString().split('T')[0], // 日付（APIから取得した形式）
-        item.period ? item.period.replace('限', '') : '不明', // 時限（数字のみ）
-        item.attendance_type, // 出欠区分（数字）
-        item.read_time || '', // 読取時間（HH:MM:SS形式）
-        item.location?.address || '' // 場所（住所）
+      const csvHeaders = ['学籍番号', '日付', '時限', '出欠区分'];
+      const csvData = sortedExportData.map((item: { student_id: string; date?: string; period?: string; attendance_status: string }) => [
+        item.student_id, // 学籍番号
+        item.date || selectedDate || new Date().toISOString().split('T')[0], // 日付
+        item.period || '不明', // 時限
+        item.attendance_status // 出欠区分（出席/欠席）
       ]);
       
       const csvContent = [csvHeaders, ...csvData]
@@ -872,7 +858,7 @@ export default function AdminPage() {
                 
                 <div className="mt-4 p-3 bg-blue-100 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    <strong>CSV出力形式:</strong> 学籍番号, 日付, 時限, 出欠区分, 読取時間, 場所
+                    <strong>CSV出力形式:</strong> 学籍番号, 日付, 時限, 出欠区分
                   </p>
                   <p className="text-xs text-blue-700 mt-1">
                     出欠区分: 1=出席, 2=欠席, 3=遅刻, 4=早退
@@ -974,18 +960,6 @@ export default function AdminPage() {
                     />
                   </div>
                   
-                  {/* 学生名検索 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">学生名</label>
-                    <input
-                      type="text"
-                      placeholder="学生名を入力"
-                      value={searchStudentName}
-                      onChange={(e) => setSearchStudentName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black text-sm"
-                    />
-                  </div>
-                  
                   {/* 出欠区分絞り込み */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">出欠区分</label>
@@ -1002,30 +976,12 @@ export default function AdminPage() {
                     </select>
                   </div>
                   
-                  
-                  {/* クラス絞り込み */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">クラス絞り込み</label>
-                    <select
-                      value={filterTableClass}
-                      onChange={(e) => setFilterTableClass(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black text-sm"
-                    >
-                      <option value="all">すべて</option>
-                      {availableClasses.map(className => (
-                        <option key={className} value={className}>{className}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
                   {/* リセットボタン */}
                   <div className="flex items-end">
                     <button
                       onClick={() => {
                         setSearchStudentId('');
-                        setSearchStudentName('');
                         setFilterAttendanceType('all');
-                        setFilterTableClass('all');
                       }}
                       className="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md font-medium transition duration-200 text-sm"
                     >
@@ -1060,43 +1016,31 @@ export default function AdminPage() {
                       <thead>
                         <tr className="bg-gray-50 border-b">
                           <th className="px-3 py-2 text-left font-medium text-gray-700">学籍番号</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">学生名</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">クラス</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700">日付</th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700">時限</th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700">出欠区分</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">読取時間</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">場所</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredExportData.map((item, index) => (
                           <tr key={index} className="border-b hover:bg-gray-50">
                             <td className="px-3 py-2 text-gray-900">{item.student_id}</td>
-                            <td className="px-3 py-2 text-gray-900">{item.name}</td>
-                            <td className="px-3 py-2 text-gray-900">{item.class}</td>
-                            <td className="px-3 py-2 text-gray-900">
-                              {item.period ? item.period.replace('限', '') : '不明'}
-                            </td>
+                            <td className="px-3 py-2 text-gray-900">{item.date}</td>
+                            <td className="px-3 py-2 text-gray-900">{item.period}</td>
                             <td className="px-3 py-2">
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                item.attendance_type === '1' ? 'bg-green-100 text-green-800' :
-                                item.attendance_type === '2' ? 'bg-red-100 text-red-800' :
-                                item.attendance_type === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                item.attendance_type === '4' ? 'bg-orange-100 text-orange-800' :
+                                item.attendance_status === '1' ? 'bg-green-100 text-green-800' :
+                                item.attendance_status === '2' ? 'bg-red-100 text-red-800' :
+                                item.attendance_status === '3' ? 'bg-yellow-100 text-yellow-800' :
+                                item.attendance_status === '4' ? 'bg-orange-100 text-orange-800' :
                                 'bg-gray-100 text-gray-800'
                               }`}>
-                                {item.attendance_type === '1' ? '出席' :
-                                 item.attendance_type === '2' ? '欠席' :
-                                 item.attendance_type === '3' ? '遅刻' :
-                                 item.attendance_type === '4' ? '早退' :
-                                 item.attendance_type}
+                                {item.attendance_status === '1' ? '出席' :
+                                 item.attendance_status === '2' ? '欠席' :
+                                 item.attendance_status === '3' ? '遅刻' :
+                                 item.attendance_status === '4' ? '早退' :
+                                 item.attendance_status}
                               </span>
-                            </td>
-                            <td className="px-3 py-2 text-gray-900 text-xs">
-                              {item.read_time || '-'}
-                            </td>
-                            <td className="px-3 py-2 text-gray-900 text-xs max-w-xs truncate" title={item.location?.address || '-'}>
-                              {item.location?.address || '-'}
                             </td>
                           </tr>
                         ))}
