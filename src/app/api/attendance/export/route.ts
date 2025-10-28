@@ -47,19 +47,13 @@ export async function GET(req: NextRequest) {
       .from('attend_management')
       .select('*');
 
-    // 日付フィルタリングは一時的に無効化（デバッグ用）
-    // if (selectedDate) {
-    //   // 日付形式を変換（2025-10-27 -> 20251027）
-    //   const dateString = selectedDate.replace(/-/g, '');
-    //   
-    //   console.log('=== 日付フィルタリングデバッグ ===');
-    //   console.log('selectedDate:', selectedDate);
-    //   console.log('変換後のdateString:', dateString);
-    //   
-    //   // timestampフィールドで日付フィルタリング（20251027形式）
-    //   // 実際のデータは "20251026" 形式なので、完全一致で検索
-    //   attendanceQuery = attendanceQuery.eq('timestamp', dateString);
-    // }
+    // 日付フィルタリングを実装（クライアント側で処理）
+    // データベース側では日付フィルタリングを行わず、全データを取得してからクライアント側でフィルタリング
+    if (selectedDate) {
+      console.log('=== 日付フィルタリングデバッグ ===');
+      console.log('selectedDate:', selectedDate);
+      console.log('データベース側では日付フィルタリングをスキップし、クライアント側で処理します');
+    }
 
     if (filterClass && filterClass !== 'all') {
       attendanceQuery = attendanceQuery.eq('class', filterClass);
@@ -72,7 +66,9 @@ export async function GET(req: NextRequest) {
     console.log('=== attend_management取得結果 ===');
     console.log('取得件数:', attendance?.length || 0);
     if (attendance && attendance.length > 0) {
-      console.log('最初の3件のtimestampフィールド:', attendance.slice(0, 3).map((a: any) => a.timestamp));
+      console.log('最初の3件のtimeフィールド:', attendance.slice(0, 3).map((a: any) => a.time));
+      console.log('最初の3件のperiodフィールド:', attendance.slice(0, 3).map((a: any) => a.period));
+      console.log('最初の3件のclassフィールド:', attendance.slice(0, 3).map((a: any) => a.class));
     }
 
     if (attendanceError) {
@@ -113,8 +109,54 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 4. 限目フィルタリング（period_settingsに基づく）
+    // 日付をYYYYMMDD形式に変換する関数（UTC時間の日付部分をそのまま使用）
+    const formatDate = (dateString: string) => {
+      // UTC時間のISO文字列をDateオブジェクトに変換
+      const date = new Date(dateString);
+      
+      // UTC時間の日付部分をそのまま使用（時刻の影響を完全に排除）
+      const utcYear = date.getUTCFullYear();
+      const utcMonth = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const utcDay = String(date.getUTCDate()).padStart(2, '0');
+      
+      // UTC時間の日付をそのままフォーマット
+      const formattedDate = `${utcYear}${utcMonth}${utcDay}`;
+      
+      console.log('=== 簡易日付変換デバッグ ===');
+      console.log('元の文字列:', dateString);
+      console.log('UTC日付:', `${utcYear}-${utcMonth}-${utcDay}`);
+      console.log('最終フォーマット:', formattedDate);
+      console.log('=== デバッグ終了 ===');
+      
+      return formattedDate;
+    };
+
+    // 4. 日付フィルタリング（クライアント側で処理）
     let filteredAttendance: { id: string; attend: string; time: string; period?: string; place?: string }[] = attendance || [];
+    
+    if (selectedDate) {
+      console.log('=== クライアント側日付フィルタリング ===');
+      console.log('フィルタリング前の件数:', filteredAttendance.length);
+      
+      filteredAttendance = filteredAttendance.filter((item: { time: string }) => {
+        const itemDate = formatDate(item.time);
+        const targetDate = selectedDate.replace(/-/g, '');
+        const match = itemDate === targetDate;
+        
+        console.log('日付比較:', {
+          itemTime: item.time,
+          itemDate,
+          targetDate,
+          match
+        });
+        
+        return match;
+      });
+      
+      console.log('フィルタリング後の件数:', filteredAttendance.length);
+    }
+    
+    // 5. 限目フィルタリング（period_settingsに基づく）
     if (filterPeriod && filterPeriod !== 'all') {
       const periodTime = periodTimeMap[filterPeriod];
       
@@ -155,19 +197,6 @@ export async function GET(req: NextRequest) {
         });
       }
     }
-
-    // 日付をYYYYMMDD形式に変換する関数（日本時間）
-    const formatDate = (dateString: string) => {
-      // ISO文字列をDateオブジェクトに変換
-      const date = new Date(dateString);
-      
-      // Supabaseに保存されているデータは既にJSTなので、そのまま使用
-      const year = date.getUTCFullYear();
-      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(date.getUTCDate()).padStart(2, '0');
-      
-      return `${year}${month}${day}`;
-    };
 
     // 学籍番号の4桁目に0を追加する関数
     const formatStudentId = (studentId: string | number) => {
@@ -215,6 +244,10 @@ export async function GET(req: NextRequest) {
 
         // 出席データがある場合の日付処理
         const timestamp = formatDate(studentAttendance.time);
+        console.log(`学生ID ${studentId} の日付変換:`, {
+          originalTime: studentAttendance.time,
+          formattedDate: timestamp
+        });
 
         return {
           student_id: formatStudentId(student.id),
@@ -237,10 +270,15 @@ export async function GET(req: NextRequest) {
         // 欠席の場合の日付処理
         let timestamp;
         if (selectedDate) {
-          const dateString = selectedDate + 'T00:00:00+09:00';
-          timestamp = formatDate(dateString);
+          // 選択された日付をそのまま使用
+          timestamp = selectedDate.replace(/-/g, '');
         } else {
-          timestamp = formatDate(new Date().toISOString());
+          // 現在の日付を使用
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, '0');
+          const day = String(now.getDate()).padStart(2, '0');
+          timestamp = `${year}${month}${day}`;
         }
 
         return {
