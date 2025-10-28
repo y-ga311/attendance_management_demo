@@ -276,21 +276,21 @@ export async function GET(req: NextRequest) {
         // 例: "西宮原一丁目, 淀川区, 大阪市, 大阪府, 532-0004, 日本"
         // → "大阪府大阪市淀川区西宮原一丁目"
         if (displayName) {
-          const parts = displayName.split(', ').map(part => part.trim());
-          const japanIndex = parts.findIndex(part => part === '日本');
+          const parts = displayName.split(', ').map((part: string) => part.trim());
+          const japanIndex = parts.findIndex((part: string) => part === '日本');
           
           if (japanIndex > 0) {
             // 日本より前の部分を取得（郵便番号を除く）
-            const addressParts = parts.slice(0, japanIndex).filter(part => !part.match(/^\d{3}-\d{4}$/));
+            const addressParts = parts.slice(0, japanIndex).filter((part: string) => !part.match(/^\d{3}-\d{4}$/));
             
             // 都道府県、市区町村、地区の順で並び替え
-            const prefecture = addressParts.find(part => part.includes('府') || part.includes('県') || part.includes('都') || part.includes('道'));
-            const city = addressParts.find(part => part.includes('市') || part.includes('町') || part.includes('村'));
-            const district = addressParts.find(part => part.includes('区') || part.includes('郡'));
-            const street = addressParts.find(part => !part.includes('府') && !part.includes('県') && !part.includes('都') && !part.includes('道') && !part.includes('市') && !part.includes('町') && !part.includes('村') && !part.includes('区') && !part.includes('郡'));
+            const prefecture = addressParts.find((part: string) => part.includes('府') || part.includes('県') || part.includes('都') || part.includes('道'));
+            const city = addressParts.find((part: string) => part.includes('市') || part.includes('町') || part.includes('村'));
+            const district = addressParts.find((part: string) => part.includes('区') || part.includes('郡'));
+            const street = addressParts.find((part: string) => !part.includes('府') && !part.includes('県') && !part.includes('都') && !part.includes('道') && !part.includes('市') && !part.includes('町') && !part.includes('村') && !part.includes('区') && !part.includes('郡'));
             
             // 都道府県から開始する住所を組み立て
-            const orderedParts = [prefecture, city, district, street].filter(part => part);
+            const orderedParts = [prefecture, city, district, street].filter((part: string | undefined) => part);
             finalAddress = orderedParts.join('');
           }
         }
