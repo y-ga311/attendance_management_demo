@@ -13,19 +13,9 @@ export default function Home() {
   const [isPortrait, setIsPortrait] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
-  // クライアントサイドの確認とスクロール無効化
+  // クライアントサイドの確認
   useEffect(() => {
     setIsClient(true);
-    
-    // ホームページでのみスクロールを無効化
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-    
-    return () => {
-      // クリーンアップ時にスクロールを有効化
-      document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
-    };
   }, []);
 
   // 画面比率の検出
@@ -65,44 +55,48 @@ export default function Home() {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-gray-100 fixed inset-0">
+    <div className="relative w-full min-h-screen bg-gray-100">
       {/* Background image (responsive) - 縦長画像（ポートレート） */}
-      <Image
-        src="/hero-background.png"
-        alt="アプリ背景（縦長）"
-        fill
-        priority
-        className="transition-opacity duration-300"
-        style={{
-          opacity: isClient && isPortrait ? 1 : 0,
-          zIndex: 0,
-          pointerEvents: 'none',
-          objectFit: 'cover',
-          objectPosition: '50% 40%'
-        }}
-      />
+      <div className="relative w-full h-screen">
+        <Image
+          src="/hero-background.png"
+          alt="アプリ背景（縦長）"
+          fill
+          priority
+          className="transition-opacity duration-300"
+          style={{
+            opacity: isClient && isPortrait ? 1 : 0,
+            zIndex: 0,
+            pointerEvents: 'none',
+            objectFit: 'cover',
+            objectPosition: '50% 40%'
+          }}
+        />
+      </div>
       
       {/* Background image (responsive) - 横長画像（ランドスケープ） */}
-      <Image
-        src="/hero-background2.png"
-        alt="アプリ背景（横長）"
-        fill
-        priority
-        className="transition-opacity duration-300"
-        style={{
-          opacity: isClient && !isPortrait ? 1 : 0,
-          zIndex: 0,
-          pointerEvents: 'none',
-          objectFit: 'cover',
-          objectPosition: '50% 50%'
-        }}
-      />
+      <div className="relative w-full h-screen">
+        <Image
+          src="/hero-background2.png"
+          alt="アプリ背景（横長）"
+          fill
+          priority
+          className="transition-opacity duration-300"
+          style={{
+            opacity: isClient && !isPortrait ? 1 : 0,
+            zIndex: 0,
+            pointerEvents: 'none',
+            objectFit: 'cover',
+            objectPosition: '50% 50%'
+          }}
+        />
+      </div>
 
       {/* Overlay (optional, readability for text) */}
-      <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent" style={{ zIndex: 1 }} />
+      <div className="absolute top-0 left-0 w-full h-screen bg-gradient-to-t from-white/60 via-transparent to-transparent" style={{ zIndex: 1 }} />
       
       {/* タイトルテキスト */}
-      <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 text-center w-full px-4">
+      <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 text-center w-full px-4" style={{ top: '33vh' }}>
         <h1 className="font-black whitespace-nowrap overflow-hidden text-ellipsis" style={{ 
           fontFamily: "'Rounded Mplus 1c', 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', 'メイリオ', sans-serif", 
           color: '#0284c7',
