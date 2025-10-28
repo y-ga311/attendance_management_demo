@@ -1019,6 +1019,7 @@ export default function AdminPage() {
                           <th className="px-3 py-2 text-left font-medium text-gray-700">日付</th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700">時限</th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700">出欠区分</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700">位置情報</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1041,6 +1042,9 @@ export default function AdminPage() {
                                  item.attendance_status === '4' ? '早退' :
                                  item.attendance_status}
                               </span>
+                            </td>
+                            <td className="px-3 py-2 text-gray-900 text-xs">
+                              {(item as any).place || '不明'}
                             </td>
                           </tr>
                         ))}

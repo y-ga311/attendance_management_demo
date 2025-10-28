@@ -69,6 +69,7 @@ export async function GET(req: NextRequest) {
       console.log('最初の3件のtimeフィールド:', attendance.slice(0, 3).map((a: any) => a.time));
       console.log('最初の3件のperiodフィールド:', attendance.slice(0, 3).map((a: any) => a.period));
       console.log('最初の3件のclassフィールド:', attendance.slice(0, 3).map((a: any) => a.class));
+      console.log('最初の3件のplaceフィールド:', attendance.slice(0, 3).map((a: any) => a.place));
     }
 
     if (attendanceError) {
@@ -207,6 +208,120 @@ export async function GET(req: NextRequest) {
       return studentIdStr;
     };
 
+    // 座標から日本の住所に変換する関数
+    const convertCoordinatesToAddress = async (coordinates: string): Promise<string> => {
+      try {
+        // 座標形式のチェック（例: "34.732874, 135.495884"）
+        const coordMatch = coordinates.match(/^(\d+\.?\d*),\s*(\d+\.?\d*)$/);
+        if (!coordMatch) {
+          console.log('座標形式ではない:', coordinates);
+          return coordinates; // 既に住所形式の場合はそのまま返す
+        }
+
+        const lat = parseFloat(coordMatch[1]);
+        const lng = parseFloat(coordMatch[2]);
+
+        // 日本の範囲内かチェック
+        if (lat < 20 || lat > 46 || lng < 122 || lng > 154) {
+          console.log('日本の範囲外の座標:', coordinates);
+          return '座標範囲外';
+        }
+
+        // 逆ジオコーディングAPIを使用（OpenStreetMap Nominatim）
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ja&addressdetails=1&extratags=1&namedetails=1&zoom=18`,
+          {
+            headers: {
+              'User-Agent': 'AttendanceManagement/1.0'
+            }
+          }
+        );
+
+        if (!response.ok) {
+          console.log('逆ジオコーディングAPI エラー:', response.status);
+          return '住所取得失敗';
+        }
+
+        const data = await response.json();
+        
+        if (data.error) {
+          console.log('逆ジオコーディングAPI エラー:', data.error);
+          return '住所取得失敗';
+        }
+
+        // 日本の住所形式で組み立て
+        const address = data.address;
+        if (!address) {
+          return '住所情報なし';
+        }
+
+        // より詳細な住所情報を取得
+        const prefecture = address.state || address.prefecture || address.county || '';
+        const city = address.city || address.town || address.village || '';
+        const district = address.suburb || address.neighbourhood || address.quarter || '';
+        const street = address.road || address.pedestrian || '';
+        const houseNumber = address.house_number || '';
+        const postcode = address.postcode || '';
+
+        // 住所を組み立て（都道府県から開始）
+        const addressParts = [prefecture, city, district, street, houseNumber]
+          .filter(part => part && part.trim() !== '')
+          .join('');
+
+        // display_nameから完全な住所を抽出（都道府県から開始）
+        let finalAddress = addressParts;
+        const displayName = data.display_name || '';
+        
+        // display_nameから日本の住所部分を抽出
+        // 例: "西宮原一丁目, 淀川区, 大阪市, 大阪府, 532-0004, 日本"
+        // → "大阪府大阪市淀川区西宮原一丁目"
+        if (displayName) {
+          const parts = displayName.split(', ').map(part => part.trim());
+          const japanIndex = parts.findIndex(part => part === '日本');
+          
+          if (japanIndex > 0) {
+            // 日本より前の部分を取得（郵便番号を除く）
+            const addressParts = parts.slice(0, japanIndex).filter(part => !part.match(/^\d{3}-\d{4}$/));
+            
+            // 都道府県、市区町村、地区の順で並び替え
+            const prefecture = addressParts.find(part => part.includes('府') || part.includes('県') || part.includes('都') || part.includes('道'));
+            const city = addressParts.find(part => part.includes('市') || part.includes('町') || part.includes('村'));
+            const district = addressParts.find(part => part.includes('区') || part.includes('郡'));
+            const street = addressParts.find(part => !part.includes('府') && !part.includes('県') && !part.includes('都') && !part.includes('道') && !part.includes('市') && !part.includes('町') && !part.includes('村') && !part.includes('区') && !part.includes('郡'));
+            
+            // 都道府県から開始する住所を組み立て
+            const orderedParts = [prefecture, city, district, street].filter(part => part);
+            finalAddress = orderedParts.join('');
+          }
+        }
+        
+        // フォールバック: 元のaddressPartsを使用
+        if (!finalAddress || finalAddress.length < 3) {
+          finalAddress = addressParts || '住所取得失敗';
+        }
+
+        console.log('座標変換結果:', {
+          original: coordinates,
+          lat,
+          lng,
+          prefecture,
+          city,
+          district,
+          street,
+          houseNumber,
+          postcode,
+          displayName: data.display_name,
+          addressParts,
+          final: finalAddress
+        });
+
+        return finalAddress;
+      } catch (error) {
+        console.error('座標変換エラー:', error);
+        return '住所変換エラー';
+      }
+    };
+
     // 4. 学生データと出席データを統合
     console.log('=== データ統合デバッグ ===');
     console.log('学生数:', studentsList.length);
@@ -249,11 +364,17 @@ export async function GET(req: NextRequest) {
           formattedDate: timestamp
         });
 
+        // 位置情報を日本の住所形式に変換
+        const address = studentAttendance.place ? 
+          await convertCoordinatesToAddress(studentAttendance.place) : 
+          '不明';
+
         return {
           student_id: formatStudentId(student.id),
           date: timestamp,
           period: periodNumber,
-          attendance_status: studentAttendance.attend
+          attendance_status: studentAttendance.attend,
+          place: address
         };
       } else {
         // 出席データがない場合（欠席）
@@ -285,7 +406,8 @@ export async function GET(req: NextRequest) {
           student_id: formatStudentId(student.id),
           date: timestamp,
           period: periodNumber,
-          attendance_status: '2'
+          attendance_status: '2',
+          place: '不明'
         };
       }
     }));
