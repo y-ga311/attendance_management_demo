@@ -392,7 +392,7 @@ export async function GET(req: NextRequest) {
 
         return {
           student_id: formatStudentId(student.id),
-          name: studentAttendance.name || student.name,
+          name: (studentAttendance as any).name || student.name,
           date: timestamp,
           period: periodNumber,
           attendance_status: studentAttendance.attend,

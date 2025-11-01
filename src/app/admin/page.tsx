@@ -362,35 +362,6 @@ export default function AdminPage() {
     }
   };
 
-  // 学生削除（単一）
-  const deleteStudent = async (studentId: string) => {
-    if (!confirm('この学生を削除しますか？この操作は取り消せません。')) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/students', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: studentId }),
-      });
-
-      if (response.ok) {
-        await fetchStudents(); // データを再取得
-        setSelectedStudents(new Set()); // 選択状態をリセット
-        alert('学生を削除しました');
-      } else {
-        const error = await response.json();
-        alert(`削除に失敗しました: ${error.error}`);
-      }
-    } catch (error) {
-      console.error('学生削除エラー:', error);
-      alert('学生の削除に失敗しました');
-    }
-  };
-
   // チェックボックスの選択状態を切り替え
   const toggleStudentSelection = (studentId: string) => {
     const newSelected = new Set(selectedStudents);
@@ -640,7 +611,7 @@ export default function AdminPage() {
 
           // ヘッダー行をスキップ
           const dataLines = lines.slice(1);
-          const students = dataLines.map((line, index) => {
+          const students = dataLines.map((line) => {
             // CSVの各フィールドをパース（ダブルクォートで囲まれた値に対応）
             const values: string[] = [];
             let currentValue = '';

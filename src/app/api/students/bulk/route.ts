@@ -4,6 +4,10 @@ import { supabaseAdmin } from '@/lib/supabase';
 // CSV一括学生登録
 export async function POST(request: NextRequest) {
   try {
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Supabase not available' }, { status: 500 });
+    }
+
     const { students } = await request.json();
 
     if (!students || !Array.isArray(students) || students.length === 0) {
@@ -40,7 +44,7 @@ export async function POST(request: NextRequest) {
 
       try {
         // 既存の学生をチェック
-        const { data: existing } = await supabaseAdmin
+        const { data: existing } = await (supabaseAdmin as any)
           .from('students')
           .select('id')
           .eq('id', student.id)
@@ -60,7 +64,7 @@ export async function POST(request: NextRequest) {
             updateData.gakusei_password = student.gakusei_password;
           }
 
-          const { error: updateError } = await supabaseAdmin
+          const { error: updateError } = await (supabaseAdmin as any)
             .from('students')
             .update(updateData)
             .eq('id', student.id);
@@ -86,7 +90,7 @@ export async function POST(request: NextRequest) {
             insertData.gakusei_password = student.gakusei_password;
           }
 
-          const { error: insertError } = await supabaseAdmin
+          const { error: insertError } = await (supabaseAdmin as any)
             .from('students')
             .insert(insertData);
 

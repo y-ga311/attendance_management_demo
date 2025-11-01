@@ -4,6 +4,10 @@ import { supabaseAdmin } from '@/lib/supabase';
 // 学生一覧取得
 export async function GET() {
   try {
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Supabase not available' }, { status: 500 });
+    }
+
     const { data: students, error } = await supabaseAdmin
       .from('students')
       .select('*')
@@ -24,6 +28,10 @@ export async function GET() {
 // 学生情報更新
 export async function PUT(request: NextRequest) {
   try {
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Supabase not available' }, { status: 500 });
+    }
+
     const { id, name, class: studentClass, student_id, email } = await request.json();
 
     if (!id || !name || !studentClass) {
@@ -38,7 +46,7 @@ export async function PUT(request: NextRequest) {
       updateData.email = email;
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from('students')
       .update(updateData)
       .eq('id', id)
@@ -59,6 +67,10 @@ export async function PUT(request: NextRequest) {
 // 学生削除
 export async function DELETE(request: NextRequest) {
   try {
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Supabase not available' }, { status: 500 });
+    }
+
     const { id } = await request.json();
 
     if (!id) {
