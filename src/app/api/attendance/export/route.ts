@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     // 2. 指定された日付の出席データを取得
     let attendanceQuery = supabaseAdmin
       .from('attend_management')
-      .select('*');
+      .select('id, attend, time, period, place, name');
 
     // 日付フィルタリングを実装（クライアント側で処理）
     // データベース側では日付フィルタリングを行わず、全データを取得してからクライアント側でフィルタリング
@@ -392,6 +392,7 @@ export async function GET(req: NextRequest) {
 
         return {
           student_id: formatStudentId(student.id),
+          name: studentAttendance.name || student.name,
           date: timestamp,
           period: periodNumber,
           attendance_status: studentAttendance.attend,
@@ -426,6 +427,7 @@ export async function GET(req: NextRequest) {
 
         return {
           student_id: formatStudentId(student.id),
+          name: student.name,
           date: timestamp,
           period: periodNumber,
           attendance_status: '2',
