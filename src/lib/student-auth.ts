@@ -1,20 +1,13 @@
-// Supabaseの環境変数が設定されている場合のみインポート
-let supabase: any = null;
-
-// 非同期でSupabaseクライアントを初期化
-const initializeSupabase = async () => {
+// Supabaseクライアントを取得する関数（必要に応じて初期化）
+const getSupabaseClient = async () => {
   try {
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      const supabaseModule = await import('./supabase');
-      supabase = supabaseModule.supabase;
-    }
+    const supabaseModule = await import('./supabase');
+    return supabaseModule.supabase;
   } catch (error) {
-    console.warn('Supabase client not available:', error);
+    console.error('Supabase client initialization error:', error);
+    return null;
   }
 };
-
-// 初期化を実行
-initializeSupabase();
 
 export interface Student {
   id: string;
@@ -32,28 +25,51 @@ export class StudentAuthService {
   // ログイン
   static async login(loginId: string, password: string): Promise<{ success: boolean; student?: AuthStudent; error?: string }> {
     try {
+      // Supabaseクライアントを取得
+      const supabase = await getSupabaseClient();
+      
       // Supabaseが利用できない場合はエラーを返す
       if (!supabase) {
+        console.error('Supabase client is null. Environment variables:', {
+          hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'set' : 'not set',
+        });
         return { success: false, error: 'データベースに接続できません。管理者にお問い合わせください。' };
       }
 
-      // studentsテーブルから該当する学生を検索
+      console.log('Attempting login for gakusei_id:', loginId);
+
+      // studentsテーブルから該当する学生を検索（gakusei_idで認証）
       const { data: students, error } = await supabase
         .from('students')
         .select('*')
-        .eq('id', loginId)
+        .eq('gakusei_id', loginId)
         .eq('gakusei_password', password);
 
       if (error) {
-        console.error('ログインエラー:', error);
-        return { success: false, error: 'データベースエラーが発生しました' };
+        console.error('ログインエラー (Supabase):', error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
+        return { success: false, error: `データベースエラーが発生しました: ${error.message}` };
       }
 
+      console.log('Login query result:', {
+        found: students?.length || 0,
+        hasData: !!students,
+      });
+
       if (!students || students.length === 0) {
+        console.log('No student found with ID:', loginId);
         return { success: false, error: 'ログインIDまたはパスワードが正しくありません' };
       }
 
       const student = students[0];
+      console.log('Login successful for student:', student.id);
       
       // セッションストレージに保存
       if (typeof window !== 'undefined') {
@@ -62,8 +78,9 @@ export class StudentAuthService {
 
       return { success: true, student: student as AuthStudent };
     } catch (error) {
-      console.error('ログインエラー:', error);
-      return { success: false, error: 'ログインに失敗しました' };
+      console.error('ログインエラー (Exception):', error);
+      const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+      return { success: false, error: `ログインに失敗しました: ${errorMessage}` };
     }
   }
 
@@ -117,6 +134,11 @@ export class StudentAuthService {
   // 学生情報の更新
   static async updateStudent(studentId: string, updates: Partial<Student>): Promise<{ success: boolean; error?: string }> {
     try {
+      const supabase = await getSupabaseClient();
+      if (!supabase) {
+        return { success: false, error: 'データベースに接続できません' };
+      }
+
       const { error } = await supabase
         .from('students')
         .update(updates)
