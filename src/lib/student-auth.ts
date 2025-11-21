@@ -64,12 +64,12 @@ export class StudentAuthService {
       });
 
       if (!students || students.length === 0) {
-        console.log('No student found with ID:', loginId);
+        console.log('No student found with gakusei_id:', loginId);
         return { success: false, error: 'ログインIDまたはパスワードが正しくありません' };
       }
 
-      const student = students[0];
-      console.log('Login successful for student:', student.id);
+      const student = students[0] as any;
+      console.log('Login successful for student:', student?.id || student?.gakusei_id || 'unknown');
       
       // セッションストレージに保存
       if (typeof window !== 'undefined') {
@@ -139,7 +139,7 @@ export class StudentAuthService {
         return { success: false, error: 'データベースに接続できません' };
       }
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('students')
         .update(updates)
         .eq('id', studentId);
